@@ -1,11 +1,8 @@
 import type { CascStorage } from '../casc/storage';
 import { DB2_FILES, loadTable } from './clientDb';
-import { FIELDS } from './db2Layouts.generated';
+import { FIELDS } from './fields';
 
-/** The fog density field, which WoWDBDefs has no name for. */
-const LIGHT_FOG_DENSITY = FIELDS.LightData.Field_1_60_1_69876_051;
-
-/** Order of the colours in a LightKey (LightData.DirectColor on). */
+/** Order of the colours in a LightKey: the LightData fields from DirectColor, which fields.ts lists in a row. */
 export const LIGHT_COLORS = [
 	'direct', 'ambient', 'skyTop', 'skyMiddle', 'skyBand1', 'skyBand2', 'skySmog', 'skyFog',
 	'sun', 'cloudSun', 'cloudEmissive', 'cloudLayer1', 'cloudLayer2',
@@ -93,7 +90,7 @@ export async function loadLighting(storage: CascStorage, mapIds: number[]): Prom
 			fogEnd: asFloat(data.getInt(id, FIELDS.LightData.FogEnd)!),
 			fogScaler: asFloat(data.getInt(id, FIELDS.LightData.FogScaler)!),
 			grading: data.getInt(id, FIELDS.LightData.ColorGradingFileDataID) ?? 0,
-			fogDensity: data.fieldCount > LIGHT_FOG_DENSITY ? asFloat(data.getInt(id, LIGHT_FOG_DENSITY) ?? 0) || 1 : 1,
+			fogDensity: asFloat(data.getInt(id, FIELDS.LightData.FogDensity) ?? 0) || 1,
 		});
 	}
 	for (const list of Object.values(keys)) list.sort((a, b) => a.time - b.time);

@@ -1,6 +1,6 @@
 import type { CascStorage } from '../casc/storage';
 import { DB2_FILES, loadTable } from './clientDb';
-import { FIELDS } from './db2Layouts.generated';
+import { FIELDS } from './fields';
 
 /** A place to go to by name: a zone with its extent, or a town or landmark on the world map. */
 export interface Place {

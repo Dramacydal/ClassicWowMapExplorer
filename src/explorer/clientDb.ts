@@ -3,7 +3,7 @@ import { Db2 } from '../formats/db2';
 import { fieldMap } from './db2Layouts';
 import type { LiquidKind } from '../formats/mh2o';
 import { DB2_FILES } from './db2Files';
-import { FIELDS } from './db2Layouts.generated';
+import { FIELDS } from './fields';
 
 export { DB2_FILES };
 
@@ -69,8 +69,7 @@ export async function liquidLooks(storage: CascStorage): Promise<LiquidLooks> {
 		types[id] = {
 			color: colors[2],
 			colors,
-			// The foam colour is kept in the field named MinimapStaticCol.
-			foam: colors[2] ? (table.getInt(id, FIELDS.LiquidType.MinimapStaticCol) ?? 0) & 0xffffff : 0,
+			foam: colors[2] ? (table.getInt(id, FIELDS.LiquidType.FoamColor) ?? 0) & 0xffffff : 0,
 			darkenDepth: table.getFloat(id, FIELDS.LiquidType.MaxDarkenDepth) ?? 0,
 			fogDarken: table.getFloat(id, FIELDS.LiquidType.FogDarkenIntensity) ?? 0,
 			ambientDarken: table.getFloat(id, FIELDS.LiquidType.AmbDarkenIntensity) ?? 0,

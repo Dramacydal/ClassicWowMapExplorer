@@ -2,7 +2,7 @@ import type { CascStorage } from '../casc/storage';
 import { CHUNKS_PER_TILE, TILE_CELLS, type AdtRoot } from '../formats/adt';
 import type { AdtTex } from '../formats/adtTex';
 import { DB2_FILES, loadTable } from './clientDb';
-import { FIELDS } from './db2Layouts.generated';
+import { FIELDS } from './fields';
 
 /** The sound group of ground with no effect: dirt. */
 export const DEFAULT_GROUND = 1;
@@ -57,8 +57,8 @@ export class GroundEffects {
 		const effects = new Map<number, ClutterEffect | null>();
 		const sounds = new Map<number, number>();
 		for (const id of textures.ids()) {
-			// GroundEffectTexture.Sound holds its TerrainType, what it sounds like underfoot.
-			const sound = terrainTypes.getInt(textures.getInt(id, FIELDS.GroundEffectTexture.Sound) ?? 0, FIELDS.TerrainType.SoundID) ?? 0;
+			// The texture's TerrainType says what it sounds like underfoot.
+			const sound = terrainTypes.getInt(textures.getInt(id, FIELDS.GroundEffectTexture.TerrainType) ?? 0, FIELDS.TerrainType.SoundID) ?? 0;
 			if (sound) sounds.set(id, sound);
 			const list: ClutterDoodad[] = [];
 			for (let k = 0; k < textures.arrayLength(FIELDS.GroundEffectTexture.DoodadID); k++) {

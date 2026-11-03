@@ -5,7 +5,7 @@ import { DB2_FILES, loadTable } from './clientDb';
 import { compose, fromQuaternion, identity, rotationZ, scaling, translation, type Mat4 } from './mat4';
 import type { GearAttachment, M2Options, Placement } from './objects';
 import { ATTACH_HAND_LEFT, ATTACH_HAND_RIGHT, ATTACH_HELM, ATTACH_SHIELD, ATTACH_SHOULDER_LEFT, ATTACH_SHOULDER_RIGHT } from '../formats/m2Pose';
-import { FIELDS } from './db2Layouts.generated';
+import { FIELDS } from './fields';
 
 const MAP_ORIGIN = 32 * TILE_SIZE;
 /** creature_template npcflag bits (patch 1.12). */

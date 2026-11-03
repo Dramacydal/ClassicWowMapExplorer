@@ -1,7 +1,7 @@
 import type { CascStorage } from '../casc/storage';
 import type { Db2 } from '../formats/db2';
 import { DB2_FILES, loadTable } from './clientDb';
-import { FIELDS } from './db2Layouts.generated';
+import { FIELDS } from './fields';
 
 /** A zone's music (ZoneMusic.db2): tracks by day and night, and the quiet between them. */
 export interface MusicSet {

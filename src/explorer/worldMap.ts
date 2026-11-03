@@ -1,6 +1,6 @@
 import type { CascStorage } from '../casc/storage';
 import { DB2_FILES, loadTable } from './clientDb';
-import { FIELDS } from './db2Layouts.generated';
+import { FIELDS } from './fields';
 
 /** Overlay pieces are cut into tiles this big. */
 const OVERLAY_TILE = 256;
@@ -103,9 +103,9 @@ export async function loadWorldMaps(storage: CascStorage, mapIds: number[]): Pro
 	const tilesOfArt = group(artTiles);
 	const overlaysOfArt = group(overlays);
 	const tilesOfOverlay = group(overlayTiles);
-	const tilesOf = (table: typeof artTiles, ids: number[] | undefined): MapTile[] => (ids ?? [])
-		.filter((t) => (table.getInt(t, FIELDS.UiMapArtTile.LayerIndex) ?? 0) === 0)
-		.map((t) => ({ row: table.getInt(t, FIELDS.UiMapArtTile.RowIndex) ?? 0, col: table.getInt(t, FIELDS.UiMapArtTile.ColIndex) ?? 0, fdid: table.getInt(t, FIELDS.UiMapArtTile.FileDataID) ?? 0 }))
+	const tilesOf = (table: typeof artTiles, fields: typeof FIELDS.UiMapArtTile, ids: number[] | undefined): MapTile[] => (ids ?? [])
+		.filter((t) => (table.getInt(t, fields.LayerIndex) ?? 0) === 0)
+		.map((t) => ({ row: table.getInt(t, fields.RowIndex) ?? 0, col: table.getInt(t, fields.ColIndex) ?? 0, fdid: table.getInt(t, fields.FileDataID) ?? 0 }))
 		.filter((t) => t.fdid && storage.status(t.fdid) === 'ok');
 
 	const out: WorldMapInfo[] = [];
@@ -117,7 +117,7 @@ export async function loadWorldMaps(storage: CascStorage, mapIds: number[]): Pro
 		const style = arts.getInt(art, FIELDS.UiMapArt.UiMapArtStyleID) ?? 0;
 		const layer = (styleLayers.get(style) ?? []).find((l) => (styles.getInt(l, FIELDS.UiMapArtStyleLayer.LayerIndex) ?? 0) === 0);
 		if (layer === undefined) continue;
-		const tiles = tilesOf(artTiles, tilesOfArt.get(art));
+		const tiles = tilesOf(artTiles, FIELDS.UiMapArtTile, tilesOfArt.get(art));
 		if (!tiles.length) continue;
 		out.push({
 			id,
@@ -135,7 +135,7 @@ export async function loadWorldMaps(storage: CascStorage, mapIds: number[]): Pro
 				y: overlays.getInt(o, FIELDS.WorldMapOverlay.OffsetY) ?? 0,
 				width: overlays.getInt(o, FIELDS.WorldMapOverlay.TextureWidth) ?? 0,
 				height: overlays.getInt(o, FIELDS.WorldMapOverlay.TextureHeight) ?? 0,
-				tiles: tilesOf(overlayTiles, tilesOfOverlay.get(o)),
+				tiles: tilesOf(overlayTiles, FIELDS.WorldMapOverlayTile, tilesOfOverlay.get(o)),
 				tileSize: OVERLAY_TILE,
 			})).filter((o) => o.tiles.length && o.areas.length),
 			assignments: list,

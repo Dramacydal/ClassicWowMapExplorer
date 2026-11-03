@@ -20,7 +20,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { CascStorage } from '../src/casc/storage';
 import { DB2_FILES, loadTable } from '../src/explorer/clientDb';
-import { FIELDS } from '../src/explorer/db2Layouts.generated';
+import { FIELDS } from '../src/explorer/fields';
 import type { SpawnFile } from '../src/explorer/spawns';
 import { KNOWN_MAPS, MapExplorer } from '../src/explorer/maps';
 import { CHUNK_SIZE, TILE_SIZE, parseAdtRoot } from '../src/formats/adt';

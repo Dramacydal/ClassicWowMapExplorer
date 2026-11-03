@@ -13,7 +13,7 @@ import { loadWorldMaps, type WorldMapInfo } from './worldMap';
 import { loadPlaces, type Place } from './places';
 import { KNOWN_MAPS } from './maps';
 import { buildBvh, globalWmoPlacement, globalWmoTiles, loadM2, loadWmo, parsePlacements, type ModelData, type ObjectKind, type Placement, type SerializedBvh } from './objects';
-import { FIELDS } from './db2Layouts.generated';
+import { FIELDS } from './fields';
 import { GroundEffects, type ClutterSource } from './groundEffects';
 import { PortalSource } from './portals';
 import { DisplayResolver, parseWeapons, SpawnSource, type CharacterOutfit, type CharacterRace } from './spawns';
