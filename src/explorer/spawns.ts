@@ -1,10 +1,11 @@
 import type { CascStorage } from '../casc/storage';
 import { TILE_SIZE } from '../formats/adt';
 import type { Db2 } from '../formats/db2';
-import { loadTable } from './clientDb';
+import { DB2_FILES, loadTable } from './clientDb';
 import { compose, fromQuaternion, identity, rotationZ, scaling, translation, type Mat4 } from './mat4';
 import type { GearAttachment, M2Options, Placement } from './objects';
 import { ATTACH_HAND_LEFT, ATTACH_HAND_RIGHT, ATTACH_HELM, ATTACH_SHIELD, ATTACH_SHOULDER_LEFT, ATTACH_SHOULDER_RIGHT } from '../formats/m2Pose';
+import { FIELDS } from './db2Layouts.generated';
 
 const MAP_ORIGIN = 32 * TILE_SIZE;
 /** creature_template npcflag bits (patch 1.12). */
@@ -222,17 +223,17 @@ export class DisplayResolver {
 	private load() {
 		this.tables ??= (async () => {
 			const [creatureDisplay, creatureModel, displayExtra, objectDisplay, textureFiles, factions] = await Promise.all([
-				loadTable(this.storage, DISPLAY_FILES.CreatureDisplayInfo),
-				loadTable(this.storage, DISPLAY_FILES.CreatureModelData),
-				loadTable(this.storage, DISPLAY_FILES.CreatureDisplayInfoExtra),
-				loadTable(this.storage, DISPLAY_FILES.GameObjectDisplayInfo),
-				loadTable(this.storage, DISPLAY_FILES.TextureFileData),
-				loadTable(this.storage, DISPLAY_FILES.FactionTemplate),
+				loadTable(this.storage, DB2_FILES.CreatureDisplayInfo),
+				loadTable(this.storage, DB2_FILES.CreatureModelData),
+				loadTable(this.storage, DB2_FILES.CreatureDisplayInfoExtra),
+				loadTable(this.storage, DB2_FILES.GameObjectDisplayInfo),
+				loadTable(this.storage, DB2_FILES.TextureFileData),
+				loadTable(this.storage, DB2_FILES.FactionTemplate),
 			]);
 			// Material resources ID -> texture file (TextureFileData: ID is the file, field 2 the material).
 			const materials = new Map<number, number>();
 			for (const fdid of textureFiles.ids()) {
-				const material = textureFiles.getInt(fdid, 2);
+				const material = textureFiles.getInt(fdid, FIELDS.TextureFileData.MaterialResourcesID);
 				if (material && !materials.has(material)) materials.set(material, fdid);
 			}
 			return { creatureDisplay, creatureModel, displayExtra, objectDisplay, factions, materials };
@@ -243,21 +244,21 @@ export class DisplayResolver {
 	/** Model scale from CreatureDisplayInfo, needed before the model itself loads. */
 	async scaleLookup(): Promise<(displayId: number) => number> {
 		const { creatureDisplay } = await this.load();
-		return (id) => creatureDisplay.getFloat(id, 4) || 1;
+		return (id) => creatureDisplay.getFloat(id, FIELDS.CreatureDisplayInfo.CreatureModelScale) || 1;
 	}
 
 	/**
-	 * How a faction template reacts to each side, from FactionTemplate (field 2 FactionGroup,
-	 * 3 FriendGroup, 4 EnemyGroup; group bits 1 player, 2 Alliance, 4 Horde, 8 monster).
+	 * How a faction template reacts to each side, from FactionTemplate (FactionGroup, FriendGroup
+	 * and EnemyGroup; group bits 1 player, 2 Alliance, 4 Horde, 8 monster).
 	 */
 	async reactionLookup(): Promise<ReactionLookup> {
 		const { factions } = await this.load();
 		const toSide = (group: number, friend: number, enemy: number, side: number): Reaction =>
 			enemy & (side | FACTION_PLAYER) ? 'hostile' : (friend | group) & side ? 'friendly' : 'neutral';
 		return (id) => {
-			const group = factions.getInt(id, 2) ?? 0;
-			const friend = factions.getInt(id, 3) ?? 0;
-			const enemy = factions.getInt(id, 4) ?? 0;
+			const group = factions.getInt(id, FIELDS.FactionTemplate.FactionGroup) ?? 0;
+			const friend = factions.getInt(id, FIELDS.FactionTemplate.FriendGroup) ?? 0;
+			const enemy = factions.getInt(id, FIELDS.FactionTemplate.EnemyGroup) ?? 0;
 			return { alliance: toSide(group, friend, enemy, FACTION_ALLIANCE), horde: toSide(group, friend, enemy, FACTION_HORDE) };
 		};
 	}
@@ -279,27 +280,28 @@ export class DisplayResolver {
 	 * from the display's own sound data or else its model's. 0 when it has none.
 	 */
 	private async footstep(displayId: number): Promise<number> {
-		this.soundData ??= loadTable(this.storage, DISPLAY_FILES.CreatureSoundData);
+		this.soundData ??= loadTable(this.storage, DB2_FILES.CreatureSoundData);
 		const [{ creatureDisplay, creatureModel }, sounds] = await Promise.all([this.load(), this.soundData]);
-		const modelId = creatureDisplay.getInt(displayId, 1) ?? 0;
-		const soundId = creatureDisplay.getInt(displayId, DISPLAY_SOUND) || creatureModel.getInt(modelId, MODEL_SOUND) || 0;
-		return sounds.getInt(soundId, SOUND_FOOTSTEP) ?? 0;
+		const modelId = creatureDisplay.getInt(displayId, FIELDS.CreatureDisplayInfo.ModelID) ?? 0;
+		// The display's sound data wins over its model's.
+		const soundId = creatureDisplay.getInt(displayId, FIELDS.CreatureDisplayInfo.SoundID) || creatureModel.getInt(modelId, FIELDS.CreatureModelData.SoundID) || 0;
+		return sounds.getInt(soundId, FIELDS.CreatureSoundData.SoundFootstepID) ?? 0;
 	}
 
 	private async creatureLook(displayId: number, weapons: Weapons | null, hd: boolean): Promise<{ fdid: number; options: M2Options } | null> {
 		const { creatureDisplay, creatureModel, displayExtra, materials } = await this.load();
-		const modelId = creatureDisplay.getInt(displayId, 1);
-		const fdid = modelId ? creatureModel.getInt(modelId, 2) : null;
+		const modelId = creatureDisplay.getInt(displayId, FIELDS.CreatureDisplayInfo.ModelID);
+		const fdid = modelId ? creatureModel.getInt(modelId, FIELDS.CreatureModelData.FileDataID) : null;
 		if (!fdid) return null;
-		const extra = creatureDisplay.getInt(displayId, 7) ?? 0;
+		const extra = creatureDisplay.getInt(displayId, FIELDS.CreatureDisplayInfo.ExtendedDisplayInfoID) ?? 0;
 		const held = weapons ? await this.weaponAttachments(weapons) : [];
 		if (extra && displayExtra.has(extra)) {
 			// Humanoid NPCs: a character model with the outfit baked into one texture. Prefer the
 			// original (SD) race model with its SD bake; fall back to the HD model the table names.
-			const race = displayExtra.getInt(extra, 1) ?? 0;
-			const sex = displayExtra.getInt(extra, 2) ?? 0;
+			const race = displayExtra.getInt(extra, FIELDS.CreatureDisplayInfoExtra.DisplayRaceID) ?? 0;
+			const sex = displayExtra.getInt(extra, FIELDS.CreatureDisplayInfoExtra.DisplaySexID) ?? 0;
 			const sd = SD_CHARACTER_MODELS[race]?.[sex];
-			const sdBake = materials.get(displayExtra.getInt(extra, 5) ?? 0);
+			const sdBake = materials.get(displayExtra.getInt(extra, FIELDS.CreatureDisplayInfoExtra.BakeMaterialResourcesID) ?? 0);
 			const [looks, gear] = await Promise.all([this.customization(extra), this.armor(extra, race, sex)]);
 			// Gear geosets (gloves, boots, ...) win over appearance ones in the same group.
 			const gearGroups = new Set(gear.geosets.map((g) => Math.floor(g / 100)));
@@ -322,7 +324,7 @@ export class DisplayResolver {
 				const extraSkin: Record<number, number> = extra8 ? { 8: extra8 } : {};
 				return { fdid: sd, options: { textures: { 1: sdBake, 6: hair, ...extraSkin, ...cape }, geosets, attachments, defaultGeosets: true, stand: true } };
 			}
-			const bake = materials.get(displayExtra.getInt(extra, 6) ?? 0) ?? sdBake ?? 0;
+			const bake = materials.get(displayExtra.getInt(extra, FIELDS.CreatureDisplayInfoExtra.HDBakeMaterialResourcesID) ?? 0) ?? sdBake ?? 0;
 			// The goblin model's own hair textures fit it when the customization names none.
 			let hair = looks.hdHair;
 			if (!hair && sd === fdid) {
@@ -332,7 +334,7 @@ export class DisplayResolver {
 			const eyes: Record<number, number> = looks.hdEyes ? { 19: looks.hdEyes } : {};
 			return { fdid, options: { textures: { 1: bake, 6: hair, ...eyes, ...cape }, geosets, attachments, defaultGeosets: true, stand: true } };
 		}
-		const skins = [0, 1, 2].map((k) => creatureDisplay.getInt(displayId, 27, k) ?? 0);
+		const skins = [0, 1, 2].map((k) => creatureDisplay.getInt(displayId, FIELDS.CreatureDisplayInfo.TextureVariationFileDataID, k) ?? 0);
 		return { fdid, options: { textures: { 11: skins[0], 12: skins[1], 13: skins[2] }, attachments: held, defaultGeosets: true, lowestVariant: true, stand: true } };
 	}
 
@@ -341,10 +343,10 @@ export class DisplayResolver {
 	private loadItems() {
 		this.itemTables ??= (async () => {
 			const [items, modelFiles, components, helmetData, base] = await Promise.all([
-				loadTable(this.storage, DISPLAY_FILES.ItemDisplayInfo),
-				loadTable(this.storage, DISPLAY_FILES.ModelFileData),
-				loadTable(this.storage, DISPLAY_FILES.ComponentModelFileData),
-				loadTable(this.storage, DISPLAY_FILES.HelmetGeosetData),
+				loadTable(this.storage, DB2_FILES.ItemDisplayInfo),
+				loadTable(this.storage, DB2_FILES.ModelFileData),
+				loadTable(this.storage, DB2_FILES.ComponentModelFileData),
+				loadTable(this.storage, DB2_FILES.HelmetGeosetData),
 				this.load(),
 			]);
 			// HelmetGeosetData (parent = a helmet's hide rule, ItemDisplayInfo field 15): [race, geoset group it hides].
@@ -352,13 +354,13 @@ export class DisplayResolver {
 			for (const id of helmetData.ids()) {
 				const rule = helmetData.getParent(id) ?? 0;
 				const list = helmetHides.get(rule) ?? [];
-				list.push([helmetData.getInt(id, 0) ?? 0, helmetData.getInt(id, 1) ?? 0]);
+				list.push([helmetData.getInt(id, FIELDS.HelmetGeosetData.RaceID) ?? 0, helmetData.getInt(id, FIELDS.HelmetGeosetData.HideGeosetGroup) ?? 0]);
 				helmetHides.set(rule, list);
 			}
 			// ModelFileData: model resources ID (field 4) -> the files that implement it.
 			const byResource = new Map<number, number[]>();
 			for (const file of modelFiles.ids()) {
-				const resource = modelFiles.getInt(file, 4) ?? 0;
+				const resource = modelFiles.getInt(file, FIELDS.ModelFileData.ModelResourcesID) ?? 0;
 				const list = byResource.get(resource) ?? [];
 				list.push(file);
 				byResource.set(resource, list);
@@ -379,7 +381,7 @@ export class DisplayResolver {
 		const files = (byResource.get(resource) ?? []).filter((f) => this.storage.status(f) === 'ok');
 		const score = (f: number) => {
 			if (!components.has(f)) return 1;
-			const fSex = components.getInt(f, 0) ?? 0, fRace = components.getInt(f, 2) ?? 0, fSide = components.getInt(f, 3) ?? -1;
+			const fSex = components.getInt(f, FIELDS.ComponentModelFileData.GenderIndex) ?? 0, fRace = components.getInt(f, FIELDS.ComponentModelFileData.RaceID) ?? 0, fSide = components.getInt(f, FIELDS.ComponentModelFileData.PositionIndex) ?? -1;
 			if (side >= 0 && fSide !== -1 && fSide !== side) return -1;
 			return (fRace === race ? 4 : fRace === 0 ? 1 : 0) + (fSex === sex ? 2 : fSex > 1 ? 1 : 0);
 		};
@@ -401,8 +403,8 @@ export class DisplayResolver {
 		const out: GearAttachment[] = [];
 		const add = async (display: number, point: number) => {
 			if (!display || !items.has(display)) return;
-			const fdid = await this.itemModel(items.getInt(display, 10, 0) ?? 0);
-			if (fdid) out.push({ point, fdid, texture: materials.get(items.getInt(display, 11, 0) ?? 0) ?? 0 });
+			const fdid = await this.itemModel(items.getInt(display, FIELDS.ItemDisplayInfo.ModelResourcesID, 0) ?? 0);
+			if (fdid) out.push({ point, fdid, texture: materials.get(items.getInt(display, FIELDS.ItemDisplayInfo.ModelMaterialResourcesID, 0) ?? 0) ?? 0 });
 		};
 		await add(mainHand, ATTACH_HAND_RIGHT);
 		await add(offHand, offHandIsShield ? ATTACH_SHIELD : ATTACH_HAND_LEFT);
@@ -423,19 +425,19 @@ export class DisplayResolver {
 		let cape = 0;
 		for (const [display, slot] of slots.get(extra) ?? []) {
 			if (!items.has(display)) continue;
-			const group = (k: number) => items.getInt(display, 13, k) ?? 0;
-			const texture = (k: number) => materials.get(items.getInt(display, 11, k) ?? 0) ?? 0;
+			const group = (k: number) => items.getInt(display, FIELDS.ItemDisplayInfo.GeosetGroup, k) ?? 0;
+			const texture = (k: number) => materials.get(items.getInt(display, FIELDS.ItemDisplayInfo.ModelMaterialResourcesID, k) ?? 0) ?? 0;
 			const setGeoset = (base: number, value: number) => {
 				if (value > 0) geosets.push(base + 1 + value);
 			};
 			switch (slot) {
 				case SLOT_HEAD: {
-					const fdid = await this.itemModel(items.getInt(display, 10, 0) ?? 0, race, sex);
+					const fdid = await this.itemModel(items.getInt(display, FIELDS.ItemDisplayInfo.ModelResourcesID, 0) ?? 0, race, sex);
 					if (fdid) {
 						attachments.push({ point: ATTACH_HELM, fdid, texture: texture(0) });
 						// Field 15: the hide rule for each sex. Hidden, a group shows its bare default
 						// (variant 1: no beard, no ears); the hair has none, so it gets no variant at all.
-						const rule = items.getInt(display, HELMET_RULE, sex) ?? 0;
+						const rule = items.getInt(display, FIELDS.ItemDisplayInfo.HelmetGeosetVis, sex) ?? 0;
 						for (const [r, group] of helmetHides.get(rule) ?? []) {
 							if (r === race) geosets.push(group === 0 ? HIDE_HAIR : group * 100 + 1);
 						}
@@ -444,8 +446,8 @@ export class DisplayResolver {
 				}
 				case SLOT_SHOULDER: {
 					// Two models (or one resource with a left and a right file); side 0 left, 1 right.
-					const left = await this.itemModel(items.getInt(display, 10, 0) ?? 0, race, sex, 0);
-					const right = await this.itemModel(items.getInt(display, 10, 1) || (items.getInt(display, 10, 0) ?? 0), race, sex, 1);
+					const left = await this.itemModel(items.getInt(display, FIELDS.ItemDisplayInfo.ModelResourcesID, 0) ?? 0, race, sex, 0);
+					const right = await this.itemModel(items.getInt(display, FIELDS.ItemDisplayInfo.ModelResourcesID, 1) || (items.getInt(display, FIELDS.ItemDisplayInfo.ModelResourcesID, 0) ?? 0), race, sex, 1);
 					if (left) attachments.push({ point: ATTACH_SHOULDER_LEFT, fdid: left, texture: texture(0) });
 					if (right) attachments.push({ point: ATTACH_SHOULDER_RIGHT, fdid: right, texture: texture(1) || texture(0) });
 					break;
@@ -485,13 +487,13 @@ export class DisplayResolver {
 
 	/** NPCModelItemSlotDisplayInfo by display extra: [item display, slot]. */
 	private itemSlots(): Promise<Map<number, [number, number][]>> {
-		this.slotIndex ??= loadTable(this.storage, DISPLAY_FILES.NPCModelItemSlotDisplayInfo).then((table) => {
+		this.slotIndex ??= loadTable(this.storage, DB2_FILES.NPCModelItemSlotDisplayInfo).then((table) => {
 			const byExtra = new Map<number, [number, number][]>();
 			for (const id of table.ids()) {
 				const extra = table.getParent(id);
 				if (extra === null) continue;
 				const list = byExtra.get(extra) ?? [];
-				list.push([table.getInt(id, 0) ?? 0, table.getInt(id, 1) ?? 0]);
+				list.push([table.getInt(id, FIELDS.NPCModelItemSlotDisplayInfo.ItemDisplayInfoID) ?? 0, table.getInt(id, FIELDS.NPCModelItemSlotDisplayInfo.ItemSlot) ?? 0]);
 				byExtra.set(extra, list);
 			}
 			return byExtra;
@@ -511,8 +513,8 @@ export class DisplayResolver {
 	private loadCustomization() {
 		this.customizationTables ??= (async () => {
 			const [displayOption, option, choice, element, geoset, material] = await Promise.all([
-				DISPLAY_FILES.CreatureDisplayInfoOption, DISPLAY_FILES.ChrCustomizationOption, DISPLAY_FILES.ChrCustomizationChoice,
-				DISPLAY_FILES.ChrCustomizationElement, DISPLAY_FILES.ChrCustomizationGeoset, DISPLAY_FILES.ChrCustomizationMaterial,
+				DB2_FILES.CreatureDisplayInfoOption, DB2_FILES.ChrCustomizationOption, DB2_FILES.ChrCustomizationChoice,
+				DB2_FILES.ChrCustomizationElement, DB2_FILES.ChrCustomizationGeoset, DB2_FILES.ChrCustomizationMaterial,
 			].map((f) => loadTable(this.storage, f)));
 			// CreatureDisplayInfoOption: (option, choice) rows whose parent is the display extra.
 			const optionsByExtra = new Map<number, [number, number][]>();
@@ -520,13 +522,13 @@ export class DisplayResolver {
 				const extra = displayOption.getParent(id);
 				if (extra === null) continue;
 				const list = optionsByExtra.get(extra) ?? [];
-				list.push([displayOption.getInt(id, 0) ?? 0, displayOption.getInt(id, 1) ?? 0]);
+				list.push([displayOption.getInt(id, FIELDS.CreatureDisplayInfoOption.ChrCustomizationOptionID) ?? 0, displayOption.getInt(id, FIELDS.CreatureDisplayInfoOption.ChrCustomizationChoiceID) ?? 0]);
 				optionsByExtra.set(extra, list);
 			}
 			// ChrCustomizationElement field 0 is the choice it belongs to.
 			const elementsByChoice = new Map<number, number[]>();
 			for (const id of element.ids()) {
-				const c = element.getInt(id, 0) ?? 0;
+				const c = element.getInt(id, FIELDS.ChrCustomizationElement.ChrCustomizationChoiceID) ?? 0;
 				const list = elementsByChoice.get(c) ?? [];
 				list.push(id);
 				elementsByChoice.set(c, list);
@@ -553,25 +555,25 @@ export class DisplayResolver {
 		let hdEyes = 0;
 		for (const [optionId, choiceId] of picks) {
 			// Choice field 5 is its order within the option, which matches the old colour index.
-			const optionName = option.getString(optionId, 0);
-			if (optionName === 'Hair Color') hairColor = choice.getInt(choiceId, 5) ?? 0;
-			if (optionName === 'Skin Color') skinColor = choice.getInt(choiceId, 5) ?? 0;
+			const optionName = option.getString(optionId, FIELDS.ChrCustomizationOption.Name_lang);
+			if (optionName === 'Hair Color') hairColor = choice.getInt(choiceId, FIELDS.ChrCustomizationChoice.OrderIndex) ?? 0;
+			if (optionName === 'Skin Color') skinColor = choice.getInt(choiceId, FIELDS.ChrCustomizationChoice.OrderIndex) ?? 0;
 			for (const e of elementsByChoice.get(choiceId) ?? []) {
 				// Some elements only apply together with another choice (field 1).
-				const related = element.getInt(e, 1) ?? 0;
+				const related = element.getInt(e, FIELDS.ChrCustomizationElement.RelatedChrCustomizationChoiceID) ?? 0;
 				if (related && !chosen.has(related)) continue;
 				// HD models: the hairstyle's material for the chosen colour is the hair texture.
-				const materialId = element.getInt(e, 4) ?? 0;
+				const materialId = element.getInt(e, FIELDS.ChrCustomizationElement.ChrCustomizationMaterialID) ?? 0;
 				if (optionName === 'Hair Style' && related && material.has(materialId)) {
-					hdHair = materials.get(material.getInt(materialId, 1) ?? 0) ?? hdHair;
+					hdHair = materials.get(material.getInt(materialId, FIELDS.ChrCustomizationMaterial.MaterialResourcesID) ?? 0) ?? hdHair;
 				}
 				// And the eye colour's is the eyeballs' texture.
 				if (optionName === 'Eye Color' && material.has(materialId)) {
-					hdEyes = materials.get(material.getInt(materialId, 1) ?? 0) ?? hdEyes;
+					hdEyes = materials.get(material.getInt(materialId, FIELDS.ChrCustomizationMaterial.MaterialResourcesID) ?? 0) ?? hdEyes;
 				}
-				const geosetId = element.getInt(e, 2) ?? 0;
+				const geosetId = element.getInt(e, FIELDS.ChrCustomizationElement.ChrCustomizationGeosetID) ?? 0;
 				if (!geosetId || !geoset.has(geosetId)) continue;
-				geosets.push((geoset.getInt(geosetId, 0) ?? 0) * 100 + (geoset.getInt(geosetId, 1) ?? 0));
+				geosets.push((geoset.getInt(geosetId, FIELDS.ChrCustomizationGeoset.GeosetType) ?? 0) * 100 + (geoset.getInt(geosetId, FIELDS.ChrCustomizationGeoset.GeosetID) ?? 0));
 			}
 		}
 		return { geosets, hairColor, skinColor, hdHair, hdEyes };
@@ -614,10 +616,10 @@ export class DisplayResolver {
 				return !!file && this.storage.status(file) === 'ok';
 			};
 			for (const id of creatureDisplay.ids()) {
-				const extra = creatureDisplay.getInt(id, 7) ?? 0;
+				const extra = creatureDisplay.getInt(id, FIELDS.CreatureDisplayInfo.ExtendedDisplayInfoID) ?? 0;
 				if (!extra || !displayExtra.has(extra)) continue;
-				const race = displayExtra.getInt(extra, 1) ?? 0;
-				const sex = displayExtra.getInt(extra, 2) ?? 0;
+				const race = displayExtra.getInt(extra, FIELDS.CreatureDisplayInfoExtra.DisplayRaceID) ?? 0;
+				const sex = displayExtra.getInt(extra, FIELDS.CreatureDisplayInfoExtra.DisplaySexID) ?? 0;
 				if (!SD_CHARACTER_MODELS[race] || sex > 1) continue;
 				// Dressed simply: a shirt or chest, trousers and boots, but no helmet, shoulders, cape or tabard.
 				let score = 0;
@@ -628,8 +630,8 @@ export class DisplayResolver {
 				if (worn.has(SLOT_SHIRT) || worn.has(SLOT_CHEST)) score += 1;
 				if (worn.has(SLOT_LEGS)) score += 1;
 				if (worn.has(SLOT_FEET)) score += 1;
-				if (usable(displayExtra.getInt(extra, 5) ?? 0)) add(`${race}:${sex}:sd`, id, score);
-				if (usable(displayExtra.getInt(extra, 6) ?? 0)) add(`${race}:${sex}:hd`, id, score);
+				if (usable(displayExtra.getInt(extra, FIELDS.CreatureDisplayInfoExtra.BakeMaterialResourcesID) ?? 0)) add(`${race}:${sex}:sd`, id, score);
+				if (usable(displayExtra.getInt(extra, FIELDS.CreatureDisplayInfoExtra.HDBakeMaterialResourcesID) ?? 0)) add(`${race}:${sex}:hd`, id, score);
 			}
 			const out = new Map<string, number[]>();
 			for (const [key, list] of scored) out.set(key, list.sort((a, b) => b.score - a.score || a.id - b.id).map((l) => l.id));
@@ -674,7 +676,7 @@ export class DisplayResolver {
 
 	async object(displayId: number): Promise<number | null> {
 		const { objectDisplay } = await this.load();
-		return objectDisplay.getInt(displayId, 1) || null;
+		return objectDisplay.getInt(displayId, FIELDS.GameObjectDisplayInfo.FileDataID) || null;
 	}
 }
 
@@ -732,34 +734,6 @@ export interface CharacterRace {
 /** Non-negative remainder, for picking round a list. */
 const wrap = (n: number, m: number) => ((n % m) + m) % m;
 
-/** Client tables for display lookups (file IDs from the community listfile). */
-
-export const DISPLAY_FILES = {
-	CreatureDisplayInfo: 1108759,
-	CreatureDisplayInfoExtra: 1264997,
-	CreatureModelData: 1365368,
-	GameObjectDisplayInfo: 1266277,
-	TextureFileData: 982459,
-	FactionTemplate: 1361579,
-	CreatureDisplayInfoOption: 3692043,
-	ChrCustomizationOption: 3384247,
-	ChrCustomizationChoice: 3450554,
-	ChrCustomizationElement: 3512765,
-	ChrCustomizationGeoset: 3456171,
-	ChrCustomizationMaterial: 3459652,
-	NPCModelItemSlotDisplayInfo: 1340661,
-	ItemDisplayInfo: 1266429,
-	HelmetGeosetData: 2821752,
-	ModelFileData: 1337833,
-	ComponentModelFileData: 1349053,
-	CreatureSoundData: 1344466,
-} as const;
-
-/** CreatureDisplayInfo's and CreatureModelData's sound data (the display's wins), and CreatureSoundData's footstep kind. */
-const DISPLAY_SOUND = 2;
-const MODEL_SOUND = 13;
-const SOUND_FOOTSTEP = 9;
-
 /** NPCModelItemSlotDisplayInfo slots. */
 const SLOT_HEAD = 0;
 const SLOT_SHOULDER = 1;
@@ -773,8 +747,6 @@ const SLOT_TABARD = 9;
 const SLOT_BACK = 10;
 /** A group-0 geoset no model has: choosing it hides every hairstyle (under a hood or helm). */
 const HIDE_HAIR = 99;
-/** ItemDisplayInfo field 15: a helmet's HelmetGeosetData rule for male and female wearers. */
-const HELMET_RULE = 15;
 
 /** [main hand, off hand, off hand is a shield] as item display IDs. */
 export type Weapons = [number, number, number];

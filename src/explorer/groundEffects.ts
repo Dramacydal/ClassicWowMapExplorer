@@ -2,23 +2,10 @@ import type { CascStorage } from '../casc/storage';
 import { CHUNKS_PER_TILE, TILE_CELLS, type AdtRoot } from '../formats/adt';
 import type { AdtTex } from '../formats/adtTex';
 import { DB2_FILES, loadTable } from './clientDb';
+import { FIELDS } from './db2Layouts.generated';
 
-/** GroundEffectTexture fields. */
-const TEXTURE_DENSITY = 0;
-/** Its TerrainType (what it sounds like underfoot). */
-const TEXTURE_TERRAIN = 1;
-/** TerrainType's footstep sound group (1 dirt, 3 stone, 4 snow, 5 wood, 6 grass...). */
-const TERRAIN_SOUND = 3;
 /** The sound group of ground with no effect: dirt. */
 export const DEFAULT_GROUND = 1;
-const TEXTURE_DOODADS = 2;
-const TEXTURE_WEIGHTS = 3;
-/** GroundEffectDoodad fields. */
-const DOODAD_MODEL = 0;
-const DOODAD_SWAY = 2;
-const DOODAD_MIN_SCALE = 4;
-const DOODAD_MAX_SCALE = 5;
-const DOODAD_YAW = 7;
 
 /** One kind of clutter model an effect scatters. */
 export interface ClutterDoodad {
@@ -57,7 +44,7 @@ export interface ClutterSource {
 export class GroundEffects {
 	private constructor(
 		private readonly effects: Map<number, ClutterEffect | null>,
-		/** Effect ID -> footstep sound group (TerrainType field 3). */
+		/** Effect ID -> footstep sound group (TerrainType.SoundID: 1 dirt, 3 stone, 4 snow, 5 wood, 6 grass...). */
 		private readonly sounds: Map<number, number>,
 	) {}
 
@@ -70,25 +57,26 @@ export class GroundEffects {
 		const effects = new Map<number, ClutterEffect | null>();
 		const sounds = new Map<number, number>();
 		for (const id of textures.ids()) {
-			const sound = terrainTypes.getInt(textures.getInt(id, TEXTURE_TERRAIN) ?? 0, TERRAIN_SOUND) ?? 0;
+			// GroundEffectTexture.Sound holds its TerrainType, what it sounds like underfoot.
+			const sound = terrainTypes.getInt(textures.getInt(id, FIELDS.GroundEffectTexture.Sound) ?? 0, FIELDS.TerrainType.SoundID) ?? 0;
 			if (sound) sounds.set(id, sound);
 			const list: ClutterDoodad[] = [];
-			for (let k = 0; k < textures.arrayLength(TEXTURE_DOODADS); k++) {
-				const doodad = textures.getInt(id, TEXTURE_DOODADS, k) ?? 0;
+			for (let k = 0; k < textures.arrayLength(FIELDS.GroundEffectTexture.DoodadID); k++) {
+				const doodad = textures.getInt(id, FIELDS.GroundEffectTexture.DoodadID, k) ?? 0;
 				// Weights are bytes; the pallet keeps unrelated bits above them.
-				const weight = (textures.getInt(id, TEXTURE_WEIGHTS, k) ?? 0) & 0xff;
-				const fdid = doodads.getInt(doodad, DOODAD_MODEL) ?? 0;
+				const weight = (textures.getInt(id, FIELDS.GroundEffectTexture.DoodadWeight, k) ?? 0) & 0xff;
+				const fdid = doodads.getInt(doodad, FIELDS.GroundEffectDoodad.ModelFileID) ?? 0;
 				if (!doodad || !weight || !fdid || storage.status(fdid) !== 'ok') continue;
 				list.push({
 					fdid,
 					weight,
-					sway: doodads.getFloat(doodad, DOODAD_SWAY) ?? 0,
-					minScale: doodads.getFloat(doodad, DOODAD_MIN_SCALE) || 1,
-					maxScale: doodads.getFloat(doodad, DOODAD_MAX_SCALE) || 1,
-					yaw: doodads.getFloat(doodad, DOODAD_YAW) ?? 360,
+					sway: doodads.getFloat(doodad, FIELDS.GroundEffectDoodad.Animscale) ?? 0,
+					minScale: doodads.getFloat(doodad, FIELDS.GroundEffectDoodad.Size_variation_min) || 1,
+					maxScale: doodads.getFloat(doodad, FIELDS.GroundEffectDoodad.Size_variation_max) || 1,
+					yaw: doodads.getFloat(doodad, FIELDS.GroundEffectDoodad.Rotation_variation_max) ?? 360,
 				});
 			}
-			const density = textures.getInt(id, TEXTURE_DENSITY) ?? 0;
+			const density = textures.getInt(id, FIELDS.GroundEffectTexture.Density) ?? 0;
 			effects.set(id, list.length && density ? { density, doodads: list } : null);
 		}
 		return new GroundEffects(effects, sounds);

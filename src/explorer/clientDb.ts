@@ -3,6 +3,7 @@ import { Db2 } from '../formats/db2';
 import { fieldMap } from './db2Layouts';
 import type { LiquidKind } from '../formats/mh2o';
 import { DB2_FILES } from './db2Files';
+import { FIELDS } from './db2Layouts.generated';
 
 export { DB2_FILES };
 
@@ -53,13 +54,6 @@ export interface LiquidLooks {
 	ocean: number;
 }
 
-/** LiquidType fields. */
-const LIQUID_DARKEN_DEPTH = 6;
-const LIQUID_FOG_DARKEN = 7;
-const LIQUID_AMBIENT_DARKEN = 8;
-const LIQUID_SUN_DARKEN = 9;
-const LIQUID_FOAM_COLOR = 15;
-const LIQUID_COLORS = 17;
 
 /** Underwater looks of every liquid type. */
 export async function liquidLooks(storage: CascStorage): Promise<LiquidLooks> {
@@ -67,19 +61,20 @@ export async function liquidLooks(storage: CascStorage): Promise<LiquidLooks> {
 	const types: Record<number, LiquidLook> = {};
 	let ocean = 2;
 	for (const id of table.ids()) {
-		const name = table.getString(id, 0) ?? '';
+		const name = table.getString(id, FIELDS.LiquidType.Name) ?? '';
 		if (name === 'PBRWater - Generic - Ocean') ocean = id;
 		// Three colours, lightest to deepest; the view fades to the deepest. Only the newer
 		// (PBRWater) types have them, and only those have a foam colour too.
-		const colors = [0, 1, 2].map((k) => (table.getInt(id, LIQUID_COLORS, k) ?? 0) & 0xffffff) as [number, number, number];
+		const colors = [0, 1, 2].map((k) => (table.getInt(id, FIELDS.LiquidType.Color, k) ?? 0) & 0xffffff) as [number, number, number];
 		types[id] = {
 			color: colors[2],
 			colors,
-			foam: colors[2] ? (table.getInt(id, LIQUID_FOAM_COLOR) ?? 0) & 0xffffff : 0,
-			darkenDepth: table.getFloat(id, LIQUID_DARKEN_DEPTH) ?? 0,
-			fogDarken: table.getFloat(id, LIQUID_FOG_DARKEN) ?? 0,
-			ambientDarken: table.getFloat(id, LIQUID_AMBIENT_DARKEN) ?? 0,
-			sunDarken: table.getFloat(id, LIQUID_SUN_DARKEN) ?? 0,
+			// The foam colour is kept in the field named MinimapStaticCol.
+			foam: colors[2] ? (table.getInt(id, FIELDS.LiquidType.MinimapStaticCol) ?? 0) & 0xffffff : 0,
+			darkenDepth: table.getFloat(id, FIELDS.LiquidType.MaxDarkenDepth) ?? 0,
+			fogDarken: table.getFloat(id, FIELDS.LiquidType.FogDarkenIntensity) ?? 0,
+			ambientDarken: table.getFloat(id, FIELDS.LiquidType.AmbDarkenIntensity) ?? 0,
+			sunDarken: table.getFloat(id, FIELDS.LiquidType.DirDarkenIntensity) ?? 0,
 		};
 	}
 	return { types, ocean };
@@ -88,11 +83,7 @@ export async function liquidLooks(storage: CascStorage): Promise<LiquidLooks> {
 /** What opening a lock takes: a gathering skill, or picking it. */
 export type LockKind = 'herb' | 'ore' | 'lockbox';
 
-/** Lock fields: [8] arrays of index, required skill and key type. */
-const LOCK_INDEX = 1;
-const LOCK_SKILL = 2;
-const LOCK_TYPE = 3;
-/** Key type 2 is a lock type (LockType.db2), whose ID is in the index field. */
+/** Lock.Index, Skill and Type are arrays of 8. Key type 2 is a lock type (LockType.db2), whose ID is in the index field. */
 const KEY_LOCK_TYPE = 2;
 const LOCK_KINDS: Record<number, LockKind> = { 1: 'lockbox', 2: 'herb', 3: 'ore' };
 
@@ -105,8 +96,8 @@ export async function lockKinds(storage: CascStorage): Promise<Record<number, Lo
 	const kinds: Record<number, LockKind> = {};
 	for (const id of table.ids()) {
 		for (let k = 0; k < 8; k++) {
-			const kind = LOCK_KINDS[table.getInt(id, LOCK_INDEX, k) ?? 0];
-			if (kind && table.getInt(id, LOCK_TYPE, k) === KEY_LOCK_TYPE && (table.getInt(id, LOCK_SKILL, k) ?? 0) > 0) {
+			const kind = LOCK_KINDS[table.getInt(id, FIELDS.Lock.Index, k) ?? 0];
+			if (kind && table.getInt(id, FIELDS.Lock.Type, k) === KEY_LOCK_TYPE && (table.getInt(id, FIELDS.Lock.Skill, k) ?? 0) > 0) {
 				kinds[id] = kind;
 				break;
 			}
@@ -127,7 +118,7 @@ export async function liquidKinds(storage: CascStorage): Promise<(type: number) 
 	return (type) => {
 		let kind = cache.get(type);
 		if (!kind) {
-			const name = (table?.getString(type, 0) ?? '').toLowerCase();
+			const name = (table?.getString(type, FIELDS.LiquidType.Name) ?? '').toLowerCase();
 			kind = /ocean|sea/.test(name) ? 'ocean' : /magma|lava/.test(name) ? 'magma' : /slime/.test(name) ? 'slime' : 'water';
 			cache.set(type, kind);
 		}
@@ -147,8 +138,8 @@ export interface FootstepSounds {
 const FOOTSTEP_GROUND_BASE = 512;
 
 /**
- * FootstepTerrainLookup (0 creature footstep kind, 1 ground: 512 + TerrainType sound group,
- * 2 step sound kit, 3 splash kit), with each kit's files (SoundKitEntry 0 kit, 1 file).
+ * FootstepTerrainLookup (creature footstep kind, ground as 512 + TerrainType sound group, step
+ * sound kit and splash kit), with each kit's files (SoundKitEntry).
  */
 export async function footstepSounds(storage: CascStorage): Promise<FootstepSounds> {
 	const [lookup, entries, terrainTypes] = await Promise.all([
@@ -158,22 +149,22 @@ export async function footstepSounds(storage: CascStorage): Promise<FootstepSoun
 	]);
 	const files = new Map<number, number[]>();
 	for (const id of entries.ids()) {
-		const file = entries.getInt(id, 1) ?? 0;
+		const file = entries.getInt(id, FIELDS.SoundKitEntry.FileDataID) ?? 0;
 		if (!file || storage.status(file) !== 'ok') continue;
-		const kit = entries.getInt(id, 0) ?? 0;
+		const kit = entries.getInt(id, FIELDS.SoundKitEntry.SoundKitID) ?? 0;
 		const list = files.get(kit) ?? [];
 		list.push(file);
 		files.set(kit, list);
 	}
 	const kits: FootstepSounds['kits'] = {};
 	for (const id of lookup.ids()) {
-		const step = files.get(lookup.getInt(id, 2) ?? 0) ?? [];
-		const splash = files.get(lookup.getInt(id, 3) ?? 0) ?? [];
+		const step = files.get(lookup.getInt(id, FIELDS.FootstepTerrainLookup.SoundID) ?? 0) ?? [];
+		const splash = files.get(lookup.getInt(id, FIELDS.FootstepTerrainLookup.SoundIDSplash) ?? 0) ?? [];
 		if (!step.length && !splash.length) continue;
-		kits[`${lookup.getInt(id, 0) ?? 0}:${(lookup.getInt(id, 1) ?? 0) - FOOTSTEP_GROUND_BASE}`] = [step, splash];
+		kits[`${lookup.getInt(id, FIELDS.FootstepTerrainLookup.CreatureFootstepID) ?? 0}:${(lookup.getInt(id, FIELDS.FootstepTerrainLookup.TerrainSoundID) ?? 0) - FOOTSTEP_GROUND_BASE}`] = [step, splash];
 	}
 	const groups: FootstepSounds['groups'] = {};
-	// TerrainType field 3: its sound group.
-	for (const id of terrainTypes.ids()) groups[id] = terrainTypes.getInt(id, 3) ?? 0;
+	// TerrainType.SoundID is its sound group.
+	for (const id of terrainTypes.ids()) groups[id] = terrainTypes.getInt(id, FIELDS.TerrainType.SoundID) ?? 0;
 	return { kits, groups };
 }

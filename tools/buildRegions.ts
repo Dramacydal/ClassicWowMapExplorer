@@ -20,6 +20,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { CascStorage } from '../src/casc/storage';
 import { DB2_FILES, loadTable } from '../src/explorer/clientDb';
+import { FIELDS } from '../src/explorer/db2Layouts.generated';
 import type { SpawnFile } from '../src/explorer/spawns';
 import { KNOWN_MAPS, MapExplorer } from '../src/explorer/maps';
 import { CHUNK_SIZE, TILE_SIZE, parseAdtRoot } from '../src/formats/adt';
@@ -37,12 +38,6 @@ const SAFE_LOCS_URL = 'https://wago.tools/db2/WorldSafeLocs/csv?build=1.13.2.314
 /** Map chunks across a continent (64 tiles of 16). */
 const GRID = 64 * 16;
 const MAP_ORIGIN = 32 * TILE_SIZE;
-/** Client tables not in DB2_FILES (only read here). */
-const TAXI_NODES = 1068100;
-const TAXI_PATH = 1067802;
-const TAXI_PATH_NODE = 1000437;
-const FACTION_TEMPLATE = 1361579;
-const GAME_OBJECT_DISPLAY_INFO = 1266277;
 /** gameobject_template.displayId of the boats and zeppelins; the rest (Naxxramas floating over the Plaguelands) are left out. */
 const TRANSPORT_KINDS: Record<number, 'ship' | 'zeppelin'> = { 3015: 'ship', 3031: 'zeppelin' };
 /** TaxiPathNode.flags: the transport jumps from this node to the next (out at sea, or between maps). */
@@ -114,7 +109,7 @@ const zoneOf = (area: number): number => {
 	const known = templates.get(area);
 	if (known) return known.zone_id || area;
 	for (let id = area, guard = 0; id && guard < 16; guard++) {
-		const parent = areaTable.getInt(id, 3) ?? 0;
+		const parent = areaTable.getInt(id, FIELDS.AreaTable.ParentAreaID) ?? 0;
 		if (!parent) return id;
 		id = parent;
 	}
@@ -123,10 +118,10 @@ const zoneOf = (area: number): number => {
 
 /**
  * Creatures on a side or friendly to players: FactionTemplate's faction group or friend group
- * (fields 2, 3) has the player, Alliance or Horde bit. Town guards, goblin bruisers, citizens.
+ * has the player, Alliance or Horde bit. Town guards, goblin bruisers, citizens.
  */
-const factions = await loadTable(storage, FACTION_TEMPLATE);
-const sided = (template: number) => (((factions.getInt(template, 2) ?? 0) | (factions.getInt(template, 3) ?? 0)) & 7) !== 0;
+const factions = await loadTable(storage, DB2_FILES.FactionTemplate);
+const sided = (template: number) => (((factions.getInt(template, FIELDS.FactionTemplate.FactionGroup) ?? 0) | (factions.getInt(template, FIELDS.FactionTemplate.FriendGroup) ?? 0)) & 7) !== 0;
 
 /** Creature levels per area: typical (middle half) of the ones you'd fight standing in it. */
 const levels = new Map<number, number[]>();
@@ -211,7 +206,7 @@ for (const map of KNOWN_MAPS) {
 		const level = t?.area_level ?? 0;
 		const c = chunkCentre(best.get(a)!.i);
 		areas[a] = {
-			name: t?.name ?? areaTable.getString(a, 1) ?? `Area ${a}`,
+			name: t?.name ?? areaTable.getString(a, FIELDS.AreaTable.AreaName_lang) ?? `Area ${a}`,
 			map: map.mapId,
 			zone,
 			side: SIDES[team as 2 | 4] ?? 'contested',
@@ -312,41 +307,41 @@ console.log('public/spawns/regions.json', Object.keys(areas).length, 'areas,', g
 
 // --- Flights ---
 
-const nodesTable = await loadTable(storage, TAXI_NODES);
-const pathsTable = await loadTable(storage, TAXI_PATH);
-const pointsTable = await loadTable(storage, TAXI_PATH_NODE);
+const nodesTable = await loadTable(storage, DB2_FILES.TaxiNodes);
+const pathsTable = await loadTable(storage, DB2_FILES.TaxiPath);
+const pointsTable = await loadTable(storage, DB2_FILES.TaxiPathNode);
 const continents = new Set(KNOWN_MAPS.map((m) => m.mapId));
 // Flight masters players can use: on a continent, for a side (flags 1 Alliance, 2 Horde), and with
-// a bit in the character's known-nodes mask (field 7); the rest are transports, quest flights and tests.
+// a bit in the character's known-nodes mask (CharacterBitNumber); the rest are transports, quest flights and tests.
 const nodes = nodesTable.ids().flatMap((id) => {
-	const map = nodesTable.getInt(id, 5) ?? -1;
-	const flags = nodesTable.getInt(id, 8) ?? 0;
-	const name = nodesTable.getString(id, 0) ?? '';
-	if (!continents.has(map) || !(flags & 3) || !nodesTable.getInt(id, 7) || /^zzOLD|Riverglades|Hyjal|Tidegear/i.test(name)) return [];
-	const [x, y, z] = [0, 1, 2].map((i) => round(nodesTable.getFloat(id, 1, i)!));
+	const map = nodesTable.getInt(id, FIELDS.TaxiNodes.ContinentID) ?? -1;
+	const flags = nodesTable.getInt(id, FIELDS.TaxiNodes.Flags) ?? 0;
+	const name = nodesTable.getString(id, FIELDS.TaxiNodes.Name_lang) ?? '';
+	if (!continents.has(map) || !(flags & 3) || !nodesTable.getInt(id, FIELDS.TaxiNodes.CharacterBitNumber) || /^zzOLD|Riverglades|Hyjal|Tidegear/i.test(name)) return [];
+	const [x, y, z] = [0, 1, 2].map((i) => round(nodesTable.getFloat(id, FIELDS.TaxiNodes.Pos, i)!));
 	return [{ id, name, map, x, y, z, alliance: !!(flags & 1), horde: !!(flags & 2) }];
 });
 const nodeIds = new Set(nodes.map((n) => n.id));
 const points = new Map<number, { i: number; x: number; y: number; z: number; map: number; flags: number; delay: number }[]>();
 for (const id of pointsTable.ids()) {
-	const path = pointsTable.getInt(id, 2)!;
+	const path = pointsTable.getInt(id, FIELDS.TaxiPathNode.PathID)!;
 	const list = points.get(path) ?? [];
 	list.push({
-		i: pointsTable.getInt(id, 3)!,
-		x: pointsTable.getFloat(id, 0, 0)!, y: pointsTable.getFloat(id, 0, 1)!, z: pointsTable.getFloat(id, 0, 2)!,
-		map: pointsTable.getInt(id, 4) ?? 0,
-		flags: pointsTable.getInt(id, 5) ?? 0,
-		delay: pointsTable.getInt(id, 6) ?? 0,
+		i: pointsTable.getInt(id, FIELDS.TaxiPathNode.NodeIndex)!,
+		x: pointsTable.getFloat(id, FIELDS.TaxiPathNode.Loc, 0)!, y: pointsTable.getFloat(id, FIELDS.TaxiPathNode.Loc, 1)!, z: pointsTable.getFloat(id, FIELDS.TaxiPathNode.Loc, 2)!,
+		map: pointsTable.getInt(id, FIELDS.TaxiPathNode.ContinentID) ?? 0,
+		flags: pointsTable.getInt(id, FIELDS.TaxiPathNode.Flags) ?? 0,
+		delay: pointsTable.getInt(id, FIELDS.TaxiPathNode.Delay) ?? 0,
 	});
 	points.set(path, list);
 }
 const paths = pathsTable.ids().flatMap((id) => {
-	const from = pathsTable.getInt(id, 1)!;
-	const to = pathsTable.getInt(id, 2)!;
+	const from = pathsTable.getInt(id, FIELDS.TaxiPath.FromTaxiNode)!;
+	const to = pathsTable.getInt(id, FIELDS.TaxiPath.ToTaxiNode)!;
 	const list = points.get(id);
 	if (!nodeIds.has(from) || !nodeIds.has(to) || !list || list.length < 2) return [];
 	list.sort((a, b) => a.i - b.i);
-	return [{ id, from, to, cost: pathsTable.getInt(id, 3) ?? 0, points: list.flatMap((p) => [round(p.x, 1), round(p.y, 1), round(p.z, 1)]) }];
+	return [{ id, from, to, cost: pathsTable.getInt(id, FIELDS.TaxiPath.Cost) ?? 0, points: list.flatMap((p) => [round(p.x, 1), round(p.y, 1), round(p.z, 1)]) }];
 });
 writeFileSync('public/spawns/flights.json', JSON.stringify({
 	source: 'TaxiNodes, TaxiPath and TaxiPathNode from the game\'s client database.',
@@ -365,7 +360,7 @@ const transportRows = query<{ entry: number; name: string; period: number; displ
 	where t.build = (select max(build) from transports where entry = t.entry)
 		and g.patch = (select max(patch) from gameobject_template where entry = t.entry and patch <= ${PATCH})
 	order by t.entry`);
-const displays = await loadTable(storage, GAME_OBJECT_DISPLAY_INFO);
+const displays = await loadTable(storage, DB2_FILES.GameObjectDisplayInfo);
 const transports = transportRows.flatMap((t) => {
 	const kind = TRANSPORT_KINDS[t.displayId];
 	const list = points.get(t.path);

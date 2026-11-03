@@ -1,7 +1,11 @@
 import type { CascStorage } from '../casc/storage';
 import { DB2_FILES, loadTable } from './clientDb';
+import { FIELDS } from './db2Layouts.generated';
 
-/** Order of the colours in a LightKey (LightData fields 3-15). */
+/** The fog density field, which WoWDBDefs has no name for. */
+const LIGHT_FOG_DENSITY = FIELDS.LightData.Field_1_60_1_69876_051;
+
+/** Order of the colours in a LightKey (LightData.DirectColor on). */
 export const LIGHT_COLORS = [
 	'direct', 'ambient', 'skyTop', 'skyMiddle', 'skyBand1', 'skyBand2', 'skySmog', 'skyFog',
 	'sun', 'cloudSun', 'cloudEmissive', 'cloudLayer1', 'cloudLayer2',
@@ -62,17 +66,17 @@ export async function loadLighting(storage: CascStorage, mapIds: number[]): Prom
 	const [lights, data] = await Promise.all([loadTable(storage, DB2_FILES.Light), loadTable(storage, DB2_FILES.LightData)]);
 	const zones: LightZone[] = [];
 	for (const id of lights.ids()) {
-		const mapId = lights.getInt(id, 3)!;
+		const mapId = lights.getInt(id, FIELDS.Light.ContinentID)!;
 		if (!mapIds.includes(mapId)) continue;
-		const params = lights.getInt(id, 4, 0)!;
+		const params = lights.getInt(id, FIELDS.Light.LightParamsID, 0)!;
 		if (!params) continue;
 		zones.push({
 			mapId,
-			x: lights.getFloat(id, 0, 0)!,
-			y: lights.getFloat(id, 0, 1)!,
-			z: lights.getFloat(id, 0, 2)!,
-			inner: lights.getFloat(id, 1)!,
-			outer: lights.getFloat(id, 2)!,
+			x: lights.getFloat(id, FIELDS.Light.GameCoords, 0)!,
+			y: lights.getFloat(id, FIELDS.Light.GameCoords, 1)!,
+			z: lights.getFloat(id, FIELDS.Light.GameCoords, 2)!,
+			inner: lights.getFloat(id, FIELDS.Light.GameFalloffStart)!,
+			outer: lights.getFloat(id, FIELDS.Light.GameFalloffEnd)!,
 			params,
 		});
 	}
@@ -80,16 +84,16 @@ export async function loadLighting(storage: CascStorage, mapIds: number[]): Prom
 	const wanted = new Set(zones.map((z) => z.params));
 	const keys: Record<number, LightKey[]> = {};
 	for (const id of data.ids()) {
-		const param = data.getInt(id, 1)!;
+		const param = data.getInt(id, FIELDS.LightData.LightParamID)!;
 		if (!wanted.has(param)) continue;
 		(keys[param] ??= []).push({
 			// The high 16 bits hold something else; the time is the low half.
-			time: data.getInt(id, 2)! & 0xffff,
-			colors: LIGHT_COLORS.map((_, i) => data.getInt(id, 3 + i)!),
-			fogEnd: asFloat(data.getInt(id, 21)!),
-			fogScaler: asFloat(data.getInt(id, 22)!),
-			grading: data.getInt(id, 32) ?? 0,
-			fogDensity: data.fieldCount > 51 ? asFloat(data.getInt(id, 51) ?? 0) || 1 : 1,
+			time: data.getInt(id, FIELDS.LightData.Time)! & 0xffff,
+			colors: LIGHT_COLORS.map((_, i) => data.getInt(id, FIELDS.LightData.DirectColor + i)!),
+			fogEnd: asFloat(data.getInt(id, FIELDS.LightData.FogEnd)!),
+			fogScaler: asFloat(data.getInt(id, FIELDS.LightData.FogScaler)!),
+			grading: data.getInt(id, FIELDS.LightData.ColorGradingFileDataID) ?? 0,
+			fogDensity: data.fieldCount > LIGHT_FOG_DENSITY ? asFloat(data.getInt(id, LIGHT_FOG_DENSITY) ?? 0) || 1 : 1,
 		});
 	}
 	for (const list of Object.values(keys)) list.sort((a, b) => a.time - b.time);
@@ -99,5 +103,5 @@ export async function loadLighting(storage: CascStorage, mapIds: number[]): Prom
 /** Area names and parents (AreaTable.db2), for zone and subzone display. */
 export async function loadAreas(storage: CascStorage): Promise<AreaInfo[]> {
 	const table = await loadTable(storage, DB2_FILES.AreaTable);
-	return table.ids().map((id) => ({ id, name: table.getString(id, 1) ?? '', parent: table.getInt(id, 3) ?? 0 }));
+	return table.ids().map((id) => ({ id, name: table.getString(id, FIELDS.AreaTable.AreaName_lang) ?? '', parent: table.getInt(id, FIELDS.AreaTable.ParentAreaID) ?? 0 }));
 }

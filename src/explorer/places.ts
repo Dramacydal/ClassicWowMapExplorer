@@ -1,5 +1,6 @@
 import type { CascStorage } from '../casc/storage';
 import { DB2_FILES, loadTable } from './clientDb';
+import { FIELDS } from './db2Layouts.generated';
 
 /** A place to go to by name: a zone with its extent, or a town or landmark on the world map. */
 export interface Place {
@@ -15,23 +16,9 @@ export interface Place {
 	zone: string | null;
 }
 
-/** UiMap fields: 0 name, 5 type (3 zone, 6 battleground). */
-const UI_MAP_NAME = 0;
-const UI_MAP_TYPE = 5;
+/** UiMap types. */
 const UI_MAP_ZONE = 3;
 const UI_MAP_BATTLEGROUND = 6;
-/** UiMapAssignment fields: 2 region [min x, y, z, max x, y, z], 4 UiMap, 6 map, 7 area. */
-const ASSIGN_REGION = 2;
-const ASSIGN_UI_MAP = 4;
-const ASSIGN_MAP = 6;
-const ASSIGN_AREA = 7;
-/** AreaPOI fields: 0 name, 1 player condition, 3 position, 5 world state, 8 flags, 13 map. */
-const POI_NAME = 0;
-const POI_CONDITION = 1;
-const POI_POSITION = 3;
-const POI_WORLD_STATE = 5;
-const POI_FLAGS = 8;
-const POI_MAP = 13;
 /** Shown on the world map at all times (towns and landmarks, not battleground objectives). */
 const POI_SHOWN = 0x4;
 
@@ -45,14 +32,14 @@ export async function loadPlaces(storage: CascStorage): Promise<Place[]> {
 	const zones: (Place & { min: [number, number]; max: [number, number] })[] = [];
 	const seen = new Set<string>();
 	for (const id of assignments.ids()) {
-		const uiMap = assignments.getInt(id, ASSIGN_UI_MAP) ?? 0;
-		const type = uiMaps.getInt(uiMap, UI_MAP_TYPE);
-		const name = uiMaps.getString(uiMap, UI_MAP_NAME);
-		if (!name || !assignments.getInt(id, ASSIGN_AREA) || (type !== UI_MAP_ZONE && type !== UI_MAP_BATTLEGROUND)) continue;
-		const mapId = assignments.getInt(id, ASSIGN_MAP) ?? 0;
+		const uiMap = assignments.getInt(id, FIELDS.UiMapAssignment.UiMapID) ?? 0;
+		const type = uiMaps.getInt(uiMap, FIELDS.UiMap.Type);
+		const name = uiMaps.getString(uiMap, FIELDS.UiMap.Name_lang);
+		if (!name || !assignments.getInt(id, FIELDS.UiMapAssignment.AreaID) || (type !== UI_MAP_ZONE && type !== UI_MAP_BATTLEGROUND)) continue;
+		const mapId = assignments.getInt(id, FIELDS.UiMapAssignment.MapID) ?? 0;
 		if (seen.has(`${mapId}:${name}`)) continue;
 		seen.add(`${mapId}:${name}`);
-		const r = (k: number) => assignments.getFloat(id, ASSIGN_REGION, k) ?? 0;
+		const r = (k: number) => assignments.getFloat(id, FIELDS.UiMapAssignment.Region, k) ?? 0;
 		const min: [number, number] = [r(0), r(1)];
 		const max: [number, number] = [r(3), r(4)];
 		const size = Math.max(max[0] - min[0], max[1] - min[1]);
@@ -75,12 +62,12 @@ export async function loadPlaces(storage: CascStorage): Promise<Place[]> {
 
 	const places: Place[] = zones.map(({ min: _min, max: _max, ...zone }) => zone);
 	for (const id of pois.ids()) {
-		const name = pois.getString(id, POI_NAME)?.trim();
-		const flags = pois.getInt(id, POI_FLAGS) ?? 0;
-		if (!name || !(flags & POI_SHOWN) || pois.getInt(id, POI_CONDITION) || pois.getInt(id, POI_WORLD_STATE)) continue;
-		const mapId = pois.getInt(id, POI_MAP) ?? 0;
-		const x = pois.getFloat(id, POI_POSITION, 0) ?? 0;
-		const y = pois.getFloat(id, POI_POSITION, 1) ?? 0;
+		const name = pois.getString(id, FIELDS.AreaPOI.Name_lang)?.trim();
+		const flags = pois.getInt(id, FIELDS.AreaPOI.Flags) ?? 0;
+		if (!name || !(flags & POI_SHOWN) || pois.getInt(id, FIELDS.AreaPOI.Description_lang) || pois.getInt(id, FIELDS.AreaPOI.PlayerConditionID)) continue;
+		const mapId = pois.getInt(id, FIELDS.AreaPOI.ContinentID) ?? 0;
+		const x = pois.getFloat(id, FIELDS.AreaPOI.Pos, 0) ?? 0;
+		const y = pois.getFloat(id, FIELDS.AreaPOI.Pos, 1) ?? 0;
 		// A city's own marker is at its gate (the middle of Ironforge's zone is the mountain it's in).
 		const city = places.find((z) => z.kind === 'zone' && z.size && z.mapId === mapId && sameName(z.name, name));
 		if (city) {

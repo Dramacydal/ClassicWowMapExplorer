@@ -1,6 +1,7 @@
 import type { CascStorage } from '../casc/storage';
 import type { Db2 } from '../formats/db2';
 import { DB2_FILES, loadTable } from './clientDb';
+import { FIELDS } from './db2Layouts.generated';
 
 /** A zone's music (ZoneMusic.db2): tracks by day and night, and the quiet between them. */
 export interface MusicSet {
@@ -45,32 +46,8 @@ export interface WmoArea {
 	area: number;
 }
 
-// Field indices in this build.
-const AREA_AMBIENCE = 7;
-const AREA_UNDERWATER_AMBIENCE = 8;
-const AREA_MUSIC = 9;
-const AREA_INTRO = 12;
-const MUSIC_NAME = 0;
-const MUSIC_SILENCE_MIN = 1;
-const MUSIC_SILENCE_MAX = 2;
-const MUSIC_SOUNDS = 3;
-const INTRO_NAME = 0;
-const INTRO_SOUND = 1;
-const INTRO_DELAY = 3;
-const AMBIENCE_LOOP = 3;
-const AMBIENCE_START = 4;
-const AMBIENCE_STOP = 5;
-// Field 6 is another [day, night] pair, but one kit for nearly every ambience (Ironforge and
+// SoundAmbience.SoundKitID is another [day, night] pair, but one kit for nearly every ambience (Ironforge and
 // Undercity too): steady wind noise far louder than the loops, so it isn't played.
-const KIT_ID = 0;
-const KIT_FILE = 1;
-const WMO_ID = 2;
-const WMO_NAME_SET = 3;
-const WMO_GROUP = 4;
-const WMO_AMBIENCE = 7;
-const WMO_MUSIC = 9;
-const WMO_INTRO = 11;
-const WMO_AREA = 13;
 
 /** Music tables, read once. Sound kits are resolved to their files (MP3s) here. */
 export class MusicTables {
@@ -94,8 +71,8 @@ export class MusicTables {
 		]);
 		const files = new Map<number, number[]>();
 		for (const id of kits.ids()) {
-			const kit = kits.getInt(id, KIT_ID) ?? 0;
-			const file = kits.getInt(id, KIT_FILE) ?? 0;
+			const kit = kits.getInt(id, FIELDS.SoundKitEntry.SoundKitID) ?? 0;
+			const file = kits.getInt(id, FIELDS.SoundKitEntry.FileDataID) ?? 0;
 			if (!kit || !file) continue;
 			const list = files.get(kit);
 			if (list) list.push(file);
@@ -106,56 +83,56 @@ export class MusicTables {
 		const sets: MusicData['sets'] = {};
 		for (const id of music.ids()) {
 			sets[id] = {
-				name: music.getString(id, MUSIC_NAME) ?? `Music ${id}`,
-				day: filesOf(music.getInt(id, MUSIC_SOUNDS, 0)),
-				night: filesOf(music.getInt(id, MUSIC_SOUNDS, 1)),
-				silence: [music.getInt(id, MUSIC_SILENCE_MIN, 0) ?? 0, music.getInt(id, MUSIC_SILENCE_MAX, 0) ?? 0],
+				name: music.getString(id, FIELDS.ZoneMusic.SetName) ?? `Music ${id}`,
+				day: filesOf(music.getInt(id, FIELDS.ZoneMusic.Sounds, 0)),
+				night: filesOf(music.getInt(id, FIELDS.ZoneMusic.Sounds, 1)),
+				silence: [music.getInt(id, FIELDS.ZoneMusic.SilenceIntervalMin, 0) ?? 0, music.getInt(id, FIELDS.ZoneMusic.SilenceIntervalMax, 0) ?? 0],
 			};
 		}
 		const intros: MusicData['intros'] = {};
 		for (const id of intro.ids()) {
-			const list = filesOf(intro.getInt(id, INTRO_SOUND));
-			if (list.length) intros[id] = { name: intro.getString(id, INTRO_NAME) ?? `Intro ${id}`, files: list, minDelay: intro.getInt(id, INTRO_DELAY) ?? 0 };
+			const list = filesOf(intro.getInt(id, FIELDS.ZoneIntroMusicTable.SoundID));
+			if (list.length) intros[id] = { name: intro.getString(id, FIELDS.ZoneIntroMusicTable.Name) ?? `Intro ${id}`, files: list, minDelay: intro.getInt(id, FIELDS.ZoneIntroMusicTable.MinDelayMinutes) ?? 0 };
 		}
 		const areas: MusicData['areas'] = {};
 		for (const id of areaTable.ids()) {
-			const m = areaTable.getInt(id, AREA_MUSIC) ?? 0;
-			const i = areaTable.getInt(id, AREA_INTRO) ?? 0;
+			const m = areaTable.getInt(id, FIELDS.AreaTable.ZoneMusic) ?? 0;
+			const i = areaTable.getInt(id, FIELDS.AreaTable.IntroSound) ?? 0;
 			if (m || i) areas[id] = { music: m, intro: i };
 		}
 
 		// Underwater ambience per area; nearly all share one, so only the others are listed.
 		const counts = new Map<number, number>();
 		for (const id of areaTable.ids()) {
-			const a = areaTable.getInt(id, AREA_UNDERWATER_AMBIENCE) ?? 0;
+			const a = areaTable.getInt(id, FIELDS.AreaTable.UwAmbience) ?? 0;
 			if (a) counts.set(a, (counts.get(a) ?? 0) + 1);
 		}
 		const underwaterDefault = [...counts].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 0;
 		const underwater: MusicData['underwater'] = {};
 		for (const id of areaTable.ids()) {
-			const a = areaTable.getInt(id, AREA_UNDERWATER_AMBIENCE) ?? 0;
+			const a = areaTable.getInt(id, FIELDS.AreaTable.UwAmbience) ?? 0;
 			if (a && a !== underwaterDefault) underwater[id] = a;
 		}
 		const ambiences: MusicData['ambiences'] = {};
 		for (const id of counts.keys()) {
 			if (!ambience.has(id)) continue;
 			ambiences[id] = {
-				loop: filesOf(ambience.getInt(id, AMBIENCE_LOOP, 0)),
-				enter: filesOf(ambience.getInt(id, AMBIENCE_START, 0)),
-				exit: filesOf(ambience.getInt(id, AMBIENCE_STOP, 0)),
+				loop: filesOf(ambience.getInt(id, FIELDS.SoundAmbience.AmbienceID, 0)),
+				enter: filesOf(ambience.getInt(id, FIELDS.SoundAmbience.AmbienceStartID, 0)),
+				exit: filesOf(ambience.getInt(id, FIELDS.SoundAmbience.AmbienceStopID, 0)),
 			};
 		}
 
 		// Background ambience per area, and the loops of every ambience (rooms of buildings have their own).
 		const areaAmbience: MusicData['areaAmbience'] = {};
 		for (const id of areaTable.ids()) {
-			const a = areaTable.getInt(id, AREA_AMBIENCE) ?? 0;
+			const a = areaTable.getInt(id, FIELDS.AreaTable.AmbienceID) ?? 0;
 			if (a) areaAmbience[id] = a;
 		}
 		const backgrounds: MusicData['backgrounds'] = {};
 		for (const id of ambience.ids()) {
-			const day = filesOf(ambience.getInt(id, AMBIENCE_LOOP, 0));
-			const night = filesOf(ambience.getInt(id, AMBIENCE_LOOP, 1));
+			const day = filesOf(ambience.getInt(id, FIELDS.SoundAmbience.AmbienceID, 0));
+			const night = filesOf(ambience.getInt(id, FIELDS.SoundAmbience.AmbienceID, 1));
 			if (day.length || night.length) backgrounds[id] = { day, night };
 		}
 		return { sets, intros, areas, underwater, underwaterDefault, ambiences, areaAmbience, backgrounds };
@@ -170,11 +147,11 @@ export class MusicTables {
 		this.wmoRows ??= Promise.resolve(indexWmoRows(table));
 		const rows = await this.wmoRows;
 		const read = (row: number | undefined): WmoArea | null => row === undefined ? null : {
-			name: table.getString(row, 0) || null,
-			music: table.getInt(row, WMO_MUSIC) ?? 0,
-			intro: table.getInt(row, WMO_INTRO) ?? 0,
-			ambience: table.getInt(row, WMO_AMBIENCE) ?? 0,
-			area: table.getInt(row, WMO_AREA) ?? 0,
+			name: table.getString(row, FIELDS.WMOAreaTable.AreaName_lang) || null,
+			music: table.getInt(row, FIELDS.WMOAreaTable.ZoneMusic) ?? 0,
+			intro: table.getInt(row, FIELDS.WMOAreaTable.IntroSound) ?? 0,
+			ambience: table.getInt(row, FIELDS.WMOAreaTable.AmbienceID) ?? 0,
+			area: table.getInt(row, FIELDS.WMOAreaTable.AreaTableID) ?? 0,
 		};
 		const room = read(rows.get(`${wmoId}:${nameSet}:${groupId}`));
 		const building = read(rows.get(`${wmoId}:${nameSet}:-1`));
@@ -192,6 +169,6 @@ export class MusicTables {
 
 function indexWmoRows(table: Db2): Map<string, number> {
 	const rows = new Map<string, number>();
-	for (const id of table.ids()) rows.set(`${table.getInt(id, WMO_ID)}:${table.getInt(id, WMO_NAME_SET)}:${table.getInt(id, WMO_GROUP)}`, id);
+	for (const id of table.ids()) rows.set(`${table.getInt(id, FIELDS.WMOAreaTable.WMOID)}:${table.getInt(id, FIELDS.WMOAreaTable.NameSetID)}:${table.getInt(id, FIELDS.WMOAreaTable.WMOGroupID)}`, id);
 	return rows;
 }

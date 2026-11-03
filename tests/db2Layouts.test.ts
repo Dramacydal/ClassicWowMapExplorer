@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { DB2_FILES } from '../src/explorer/db2Files';
 import { FIELDS } from '../src/explorer/db2Layouts.generated';
 import { fieldMap } from '../src/explorer/db2Layouts';
-import { fieldMapOf, parseLayouts } from '../tools/buildLayouts';
+import { fieldMapOf, parseLayouts, referenceLayout } from '../tools/buildLayouts';
 
 test('parses layouts, leaving out IDs and relations kept apart from the records', () => {
 	const layouts = parseLayouts(`COLUMNS
@@ -20,9 +20,15 @@ BUILD 1.0.0.2
 $id$ID<32>
 Name
 `);
-	expect(layouts.get('AB12')).toEqual(['Name', 'Colors']);
-	expect(layouts.get('CD34')).toEqual(['Name', 'Colors']);
-	expect(layouts.get('EF56')).toEqual(['ID', 'Name']);
+	expect(layouts.get('AB12')?.fields).toEqual(['Name', 'Colors']);
+	expect(layouts.get('CD34')?.fields).toEqual(['Name', 'Colors']);
+	expect(layouts.get('EF56')?.fields).toEqual(['ID', 'Name']);
+	expect(layouts.get('EF56')?.builds).toEqual(['1.0.0.2']);
+});
+
+test('takes the newest build of the reference version as the reference layout', () => {
+	const layouts = parseLayouts('LAYOUT AA\nBUILD 1.60.1.100, 1.15.0.5\nA\n\nLAYOUT BB\nBUILD 1.60.1.200\nB\n\nLAYOUT CC\nBUILD 2.0.0.900\nC\n');
+	expect(referenceLayout(layouts)?.hash).toBe('BB');
 });
 
 test('maps reference fields to their place in another layout', () => {
