@@ -13,6 +13,7 @@ import { loadWorldMaps, type WorldMapInfo } from './worldMap';
 import { loadPlaces, type Place } from './places';
 import { KNOWN_MAPS } from './maps';
 import { buildBvh, globalWmoPlacement, globalWmoTiles, loadM2, loadWmo, parsePlacements, type ModelData, type ObjectKind, type Placement, type SerializedBvh } from './objects';
+import { FIELDS } from './db2Layouts.generated';
 import { GroundEffects, type ClutterSource } from './groundEffects';
 import { PortalSource } from './portals';
 import { DisplayResolver, parseWeapons, SpawnSource, type CharacterOutfit, type CharacterRace } from './spawns';
@@ -59,11 +60,6 @@ export interface MapListing {
 	category: MapCategory;
 }
 
-/** Map.db2 fields. */
-const MAP_DIRECTORY = 0;
-const MAP_NAME = 1;
-const MAP_INSTANCE_TYPE = 8;
-const MAP_WDT = 21;
 const CATEGORIES: MapCategory[] = ['other', 'dungeon', 'raid', 'battleground'];
 
 export interface FarTile {
@@ -128,9 +124,9 @@ export class WorldLoader {
 	 * path, world/maps/<directory>/<directory>.wdt, the directory being the map's first field.
 	 */
 	private mapWdt(table: Db2, mapId: number): number {
-		const listed = table.getInt(mapId, MAP_WDT);
+		const listed = table.getInt(mapId, FIELDS.Map.WdtFileDataID);
 		if (listed !== null) return listed;
-		const directory = table.getString(mapId, MAP_DIRECTORY)?.toLowerCase();
+		const directory = table.getString(mapId, FIELDS.Map.Directory)?.toLowerCase();
 		return directory ? this.storage.lookupPath(`world/maps/${directory}/${directory}.wdt`) ?? 0 : 0;
 	}
 
@@ -155,7 +151,7 @@ export class WorldLoader {
 		const wdtFdid = this.mapWdt(table, mapId);
 		if (!wdtFdid || this.storage.status(wdtFdid) !== 'ok') return null;
 		const wdt = await this.maps.wdt(wdtFdid);
-		const name = table.getString(mapId, MAP_NAME) ?? `Map ${mapId}`;
+		const name = table.getString(mapId, FIELDS.Map.MapName_lang) ?? `Map ${mapId}`;
 		const tiles = wdt.tiles.filter((t) => t !== null);
 		// Older maps keep their WDL right before the WDT; newer ones' can't be found (unnamed).
 		let farTiles: FarTile[] = [];
@@ -186,8 +182,8 @@ export class WorldLoader {
 			const known = KNOWN_MAPS.find((m) => m.mapId === id);
 			out.push({
 				id,
-				name: known?.name ?? table.getString(id, MAP_NAME) ?? `Map ${id}`,
-				category: known ? 'continent' : CATEGORIES[table.getInt(id, MAP_INSTANCE_TYPE) ?? 0] ?? 'other',
+				name: known?.name ?? table.getString(id, FIELDS.Map.MapName_lang) ?? `Map ${id}`,
+				category: known ? 'continent' : CATEGORIES[table.getInt(id, FIELDS.Map.InstanceType) ?? 0] ?? 'other',
 			});
 		}
 		return out.sort((a, b) => a.name.localeCompare(b.name));

@@ -9,6 +9,7 @@
 		"typecheck": "tsc --noEmit",
 		"test": "bun test",
 		"probe": "bun tools/probe.ts",
+		"layouts": "bun tools/buildLayouts.ts",
 		"spawns": "bun tools/buildSpawns.ts",
 		"regions": "bun tools/buildRegions.ts",
 		"portable": "bun tools/buildPortable.ts",

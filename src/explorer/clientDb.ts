@@ -2,29 +2,9 @@ import type { CascStorage } from '../casc/storage';
 import { Db2 } from '../formats/db2';
 import { fieldMap } from './db2Layouts';
 import type { LiquidKind } from '../formats/mh2o';
+import { DB2_FILES } from './db2Files';
 
-/** File IDs of client database tables (DBFilesClient/*.db2); they're unnamed in the root. */
-export const DB2_FILES = {
-	AreaPOI: 1000630,
-	AreaTable: 1353545,
-	FootstepTerrainLookup: 1267647,
-	GroundEffectDoodad: 1308057,
-	GroundEffectTexture: 1308499,
-	Light: 1375579,
-	LightData: 1375580,
-	LightParams: 1334669,
-	LiquidType: 1371380,
-	Lock: 1343608,
-	Map: 1349477,
-	SoundAmbience: 1310628,
-	SoundKitEntry: 1237435,
-	TerrainType: 1310249,
-	UiMap: 1957206,
-	UiMapAssignment: 1957219,
-	WMOAreaTable: 1355528,
-	ZoneIntroMusicTable: 1310251,
-	ZoneMusic: 1310254,
-} as const;
+export { DB2_FILES };
 
 const tables = new WeakMap<CascStorage, Map<number, Promise<Db2>>>();
 

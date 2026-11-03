@@ -4,7 +4,10 @@
  * them; for another version's layout of a table, map[i] is where Forever's field i is in it, or
  * null where it hasn't one. Worked out by matching the rows the versions share (the same ID
  * with the same values). A layout not listed is read as it is, a field past its end as missing.
+ * Tables in db2Layouts.generated.ts are built from WoWDBDefs (`bun run layouts`); the rest are below.
  */
+import { GENERATED_LAYOUTS } from './db2Layouts.generated';
+
 type FieldMap = (number | null)[];
 
 /**
@@ -37,11 +40,9 @@ const LAYOUTS: Record<number, Record<number, FieldMap>> = {
 	1375580: { 0x70c6cd80: moved(63, [1, 0, 42], [60, 43, 3]) },
 	// Lock: Forever has a field in front.
 	1343608: { 0x8fa7e48a: moved(5, [1, 0, 4]) },
-	// Map: Classic has a single field where Forever has two, and no WDT file (found by name instead).
-	1349477: { 0xb47c6f05: moved(26, [0, 0, 6], [7, 6, 6], [16, 15, 1], [20, 20, 1], [25, 22, 1]) },
 };
 
 /** How to read a table's fields as Forever numbers them, or null if this layout needs nothing. */
 export function fieldMap(fdid: number, layoutHash: number): FieldMap | null {
-	return LAYOUTS[fdid]?.[layoutHash] ?? null;
+	return GENERATED_LAYOUTS[fdid]?.[layoutHash] ?? LAYOUTS[fdid]?.[layoutHash] ?? null;
 }
