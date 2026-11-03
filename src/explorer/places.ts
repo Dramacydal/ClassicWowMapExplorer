@@ -64,6 +64,9 @@ export async function loadPlaces(storage: CascStorage): Promise<Place[]> {
 	for (const id of pois.ids()) {
 		const name = pois.getString(id, FIELDS.AreaPOI.Name_lang)?.trim();
 		const flags = pois.getInt(id, FIELDS.AreaPOI.Flags) ?? 0;
+		// A description or a player condition marks event points, battleground objectives and pet tamers.
+		// The code once called these fields (1 and 5) "player condition" and "world state"; WoWDBDefs names
+		// them Description_lang and PlayerConditionID, and WorldStateID is field 15.
 		if (!name || !(flags & POI_SHOWN) || pois.getInt(id, FIELDS.AreaPOI.Description_lang) || pois.getInt(id, FIELDS.AreaPOI.PlayerConditionID)) continue;
 		const mapId = pois.getInt(id, FIELDS.AreaPOI.ContinentID) ?? 0;
 		const x = pois.getFloat(id, FIELDS.AreaPOI.Pos, 0) ?? 0;
