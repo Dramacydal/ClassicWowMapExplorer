@@ -648,8 +648,8 @@ export const FIELDS = {
 	},
 } as const;
 
-/** By table file ID, then layout hash: where each reference field is in that layout, null where it has none. */
-export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>> = {
+/** By table file ID, then layout hash: where each reference field is in that layout, null where it has none; null for a layout the same as the reference. */
+export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[] | null>> = {
 	// AreaPOI
 	1000630: {
 		0xedde9ce9: [0, 1, 2, 3, 4, 5, null, 6, 7, 8, 9, 10, null, 11, 12, 13, null, 14, null, null, 15, 16],
@@ -677,6 +677,7 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0x701f6e76: [0, 1, 2, 3, 4, 5, null, 6, 7, 8, 9, 10, 11, 13, 14, 15, 12, 16, 17, 18, 19, 20],
 		0x605253ec: [0, 1, 2, 3, 4, 5, null, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
 		0x5f5ee2ef: [0, 1, 2, 3, 4, 5, null, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+		0xa8930cbb: null,
 	},
 	// AreaTable
 	1353545: {
@@ -697,6 +698,7 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0x9864cadf: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, null, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
 		0x3f51de1f: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, null, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
 		0x5db1a3ff: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, null, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
+		0x9995b797: null,
 	},
 	// ChrCustomizationChoice
 	3450554: {
@@ -710,6 +712,8 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0xa4453763: [0, 1, 2, 3, null, 4, 5, 6, 7, null, 8],
 		0xaa51f086: [0, 1, 2, 3, null, 4, 5, 6, 7, null, 8],
 		0x03a6dcb1: [0, 1, 2, 3, 4, 5, 6, 7, 8, null, 9],
+		0xaa548ae1: null,
+		0x9559c358: null,
 	},
 	// ChrCustomizationElement
 	3512765: {
@@ -727,15 +731,25 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0x0e39f850: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, null, null, null],
 		0x978b6c48: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, null, null],
 		0xe040533a: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, null],
+		0x79dfed35: null,
+		0x6483c37e: null,
 	},
 	// ChrCustomizationGeoset
 	3456171: {
+		0xf1b919ba: null,
+		0x9d95412a: null,
+		0x44c80deb: null,
+		0xbf55f2fb: null,
 	},
 	// ChrCustomizationMaterial
 	3459652: {
 		0x328dea6b: [1, 2],
 		0xe61f7a35: [1, 2],
 		0x25d08f0c: [1, 2],
+		0xe2c530ab: null,
+		0x22678cdc: null,
+		0x68d0798c: null,
+		0xbe9767e9: null,
 	},
 	// ChrCustomizationOption
 	3384247: {
@@ -748,10 +762,20 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0x5c340158: [0, 1, 2, 3, null, 4, 5, 6, 7, 8, null, null, null],
 		0x2b7bf5b8: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, null, null],
 		0xeb7143ac: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, null],
+		0x961cbf36: null,
+		0x77a321d5: null,
 		0x3f9b06fb: [0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+		0x1eb3451e: null,
+		0xdcc2a86e: null,
 	},
 	// ComponentModelFileData
 	1349053: {
+		0x25bb55a7: null,
+		0x0f90afaf: null,
+		0xddec6f9f: null,
+		0x34e0adcf: null,
+		0x070b9b9a: null,
+		0xad90d87a: null,
 	},
 	// CreatureDisplayInfo
 	1108759: {
@@ -771,6 +795,9 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0x1d5bdc6a: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, null, null, null, 24],
 		0x7a17e1dd: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, null, null, null, 24],
 		0x357ff9cd: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, null, null, null, 24],
+		0x668aa58a: null,
+		0x19189406: null,
+		0x7275f5f6: null,
 	},
 	// CreatureDisplayInfoExtra
 	1264997: {
@@ -782,9 +809,16 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0x48377c9e: [null, 2, 3, 4, 11, 0, 1],
 		0x89e31b13: [null, 0, 1, 2, 8, 9, 10],
 		0xc4cf4823: [null, 0, 1, 2, 8, 9, 10],
+		0x1be6635c: null,
+		0x8fccff0c: null,
+		0x1685a9bc: null,
+		0x4d9fe25c: null,
 	},
 	// CreatureDisplayInfoOption
 	3692043: {
+		0x2155e881: null,
+		0xdbd77820: null,
+		0x2f331c33: null,
 	},
 	// CreatureModelData
 	1365368: {
@@ -801,6 +835,9 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0xd3e2c1d3: [0, 1, 2, null, null, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, null, 30],
 		0xeddf3253: [0, 1, 2, null, null, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, null, 30],
 		0xcd28d54b: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, null, 32],
+		0x6e5ecc1d: null,
+		0x6148d238: null,
+		0x0f5449f8: null,
 	},
 	// CreatureSoundData
 	1344466: {
@@ -811,14 +848,30 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0xb7c11ea1: [null, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, null, 35, 36],
 		0x9c866b0c: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, null, 36, 37],
 		0x0fe7b1ec: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, null, 36, 37],
+		0x6ef96ed7: null,
+		0x2afa921b: null,
+		0xe5ee765b: null,
 	},
 	// FactionTemplate
 	1361579: {
+		0xb6fc1c72: null,
 		0x6f1d2135: [0, 1, 4, 5, 6, 2, 3],
 		0xae060039: [0, 1, 4, 5, 6, 2, 3],
+		0xd7143473: null,
+		0xdb7d5e30: null,
+		0x0dcc3090: null,
+		0x207c5e80: null,
+		0xd6fafa3f: null,
+		0x47624a42: null,
+		0x22b6dc22: null,
 	},
 	// FootstepTerrainLookup
 	1267647: {
+		0x454895ae: null,
+		0xc70aacc6: null,
+		0x3a1114bc: null,
+		0xc8b9fdac: null,
+		0x747d783f: null,
 	},
 	// GameObjectDisplayInfo
 	1266277: {
@@ -833,6 +886,9 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0xe56389df: [0, 1, 2, 3, 4, null, null, null, null],
 		0x7e33a93f: [0, 1, 2, 3, 4, null, null, null, null],
 		0x7f774625: [0, 1, 2, 3, 4, 5, 6, 7, null],
+		0x525ad514: null,
+		0xd85414d1: null,
+		0x16d1dd61: null,
 	},
 	// GroundEffectDoodad
 	1308057: {
@@ -844,6 +900,10 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0xee9b382e: [3, 2, 0, 1, null, null, null, null, null],
 		0xab0c6e12: [0, 1, 2, 3, null, null, null, null, null],
 		0x7ac0b592: [0, 1, 2, 3, null, null, null, null, null],
+		0x549fa0d3: null,
+		0xf592b773: null,
+		0xd8c42c51: null,
+		0xcfd94a21: null,
 	},
 	// GroundEffectTexture
 	1308499: {
@@ -855,13 +915,20 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0x6e1d6272: [3, 2, 0, 1, null],
 		0xccbd52e8: [0, 1, 2, 3, null],
 		0x50b304d6: [0, 1, 2, 3, null],
+		0x32807c98: null,
+		0x3dec72d8: null,
+		0xd93d5678: null,
 	},
 	// HelmetGeosetData
 	2821752: {
+		0x3571a507: null,
 		0xa88423bf: [0, 1, null, null],
 		0x4c7dca12: [0, 1, null, null],
 		0x7667436e: [0, 1, 2, null],
 		0xe253742f: [0, 1, 2, null],
+		0x78c6b857: null,
+		0x9b00eb74: null,
+		0x103b3b37: null,
 	},
 	// ItemDisplayInfo
 	1266429: {
@@ -872,9 +939,17 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0x404901c8: [null, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
 		0xb923d577: [null, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
 		0xf2d99687: [null, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+		0xd922b51f: null,
+		0x45c2f619: null,
+		0x9f3ab8a9: null,
 	},
 	// Light
 	1375579: {
+		0x25025a13: null,
+		0x04052b1f: null,
+		0x9088a2a3: null,
+		0xad1b2253: null,
+		0x5f16bc84: null,
 	},
 	// LightData
 	1375580: {
@@ -895,6 +970,7 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0x1d523ca5: [null, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 43, 44, 45],
 		0xb5052d20: [null, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 43, 44, 45],
 		0x6abf2921: [null, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 44, 45, 46],
+		0x360da016: null,
 	},
 	// LightParams
 	1334669: {
@@ -914,6 +990,7 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0x96239779: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
 		0xf34ed6fa: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, null, null, null, null, null, null, null, null, null],
 		0xcae394e7: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, null, null, null, null, null, null, null],
+		0xa7f31923: null,
 	},
 	// LiquidType
 	1371380: {
@@ -921,6 +998,13 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0x3313bbf3: [0, 1, 11, 13, 18, 2, 3, 4, 5, 6, 12, 7, 14, 15, 16, null, 17, 8, 9, 10, null],
 		0x63469432: [0, 1, 13, 15, 20, 2, 3, 4, 5, 6, 14, 7, 16, 17, 18, 8, 19, 9, 10, 11, 12],
 		0x0ff9afce: [0, 1, 13, 15, 20, 2, 3, 4, 5, 6, 14, 7, 16, 17, 18, 8, 19, 9, 10, 11, 12],
+		0x29f8c65e: null,
+		0xd4966711: null,
+		0xd0172a80: null,
+		0xafffc9e0: null,
+		0x95db15b6: null,
+		0x4397cee6: null,
+		0xd1eceec9: null,
 	},
 	// Lock
 	1343608: {
@@ -930,6 +1014,10 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0xdac7f42f: [null, 0, 1, 2, 3],
 		0x156c0bd7: [null, 0, 1, 2, 3],
 		0x2bd710c7: [null, 0, 1, 2, 3],
+		0x2edd6b10: null,
+		0xd359bbe0: null,
+		0xfcc491d2: null,
+		0xda418152: null,
 	},
 	// Map
 	1349477: {
@@ -966,6 +1054,7 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0xecab3bde: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, null, 22, null, 23],
 		0xe0196c63: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, null, 22, 23, 24],
 		0x75863e23: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, null, 22, 23, 24],
+		0xd43afac3: null,
 	},
 	// ModelFileData
 	1337833: {
@@ -977,10 +1066,20 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0x9c9b4543: [null, 0, 1, 2, 3],
 		0xea46bc99: [null, 0, 1, 2, 3],
 		0xdfbc2a88: [null, 0, 1, 2, 3],
+		0x825a2247: null,
+		0x1045be38: null,
+		0x2ae4e788: null,
 	},
 	// NPCModelItemSlotDisplayInfo
 	1340661: {
+		0xff27500b: null,
 		0x3890d0a8: [1, 2],
+		0x11d16204: null,
+		0xb8ec2628: null,
+		0xba98178d: null,
+		0x6345189c: null,
+		0x7a4c3dfd: null,
+		0xc2057f5b: null,
 	},
 	// SoundAmbience
 	1310628: {
@@ -991,6 +1090,11 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0xb073d4b5: [0, 1, 2, 3, null, null, null],
 		0x5f4d1f1d: [0, 1, 2, 3, null, null, null],
 		0x625245c7: [0, 1, 2, 3, 4, 5, null],
+		0x77ce9923: null,
+		0xdc7d52f2: null,
+		0x6383bd43: null,
+		0xcb856968: null,
+		0x6e25d515: null,
 	},
 	// SoundKitEntry
 	1237435: {
@@ -1001,6 +1105,8 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0xcbc66b5f: [0, 1, 2, 3, null],
 		0x8fea5f4f: [0, 1, 2, 3, null],
 		0x962b1dcc: [0, 1, 2, 3, null],
+		0x67868919: null,
+		0x8f82ff7d: null,
 	},
 	// TaxiNodes
 	1068100: {
@@ -1017,17 +1123,41 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0x9f773045: [0, 2, 4, 6, 1, 7, 8, 9, 10, 11, null, 5, 12, null, 3],
 		0x0e9f99c5: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, null, 10, 11, null, 12],
 		0x91adbf11: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, null, 10, 11, 12, 13],
+		0x179af3cf: null,
+		0x187cc2fe: null,
+		0x890762dd: null,
+		0x3aff48f9: null,
+		0x32df03e3: null,
+		0x3f7cc8b2: null,
+		0x5ee95ba9: null,
+		0xe7b597f0: null,
 	},
 	// TaxiPath
 	1067802: {
 		0xf44e2bf5: [2, 0, 1, 3],
 		0x419933cd: [2, 0, 1, 3],
+		0x3716bbcd: null,
+		0x0eca5a01: null,
+		0x9b67699c: null,
+		0xa303de51: null,
 	},
 	// TaxiPathNode
 	1000437: {
+		0x40cf66af: null,
+		0xae1e94c6: null,
+		0xc38748b1: null,
+		0xd086e620: null,
+		0xbb94aa30: null,
 		0xd38e8c01: [0, 4, 1, 3, 2, 5, 6, 7, 8],
 		0xa5604f55: [0, 4, 1, 3, 2, 5, 6, 7, 8],
 		0xb2102b34: [0, 3, 1, 4, 2, 5, 6, 7, 8],
+		0xe28c3360: null,
+		0x7cc528a4: null,
+		0x6ac41b7b: null,
+		0xa20ff622: null,
+		0xf1bec205: null,
+		0xb70d1ee0: null,
+		0xfe362e70: null,
 	},
 	// TerrainType
 	1310249: {
@@ -1038,11 +1168,23 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0xa0c11ca4: [0, 1, 2, 3, 4],
 		0x980dbe0a: [0, 1, 2, 3, 4],
 		0xad4ffb9a: [0, 1, 2, 3, 4],
+		0x4fe20345: null,
+		0xb4573071: null,
+		0x7ce432ce: null,
+		0xea86320e: null,
+		0xd533642e: null,
+		0xec0d143d: null,
+		0x7a6e1ecd: null,
 	},
 	// TextureFileData
 	982459: {
 		0xf7a606b0: [2, 1, 0],
 		0xe0790d00: [0, 2, 1],
+		0x71d3bd92: null,
+		0x9082651d: null,
+		0x1c9a021c: null,
+		0x50299c02: null,
+		0xbd7c74c2: null,
 	},
 	// UiMap
 	1957206: {
@@ -1063,19 +1205,34 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0xe83675c6: [0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, null, null],
 		0xeb52aa19: [0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, null],
 		0x77aedbe6: [0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15],
+		0xdb51d55f: null,
 	},
 	// UiMapArt
 	1957202: {
 		0x146d9b85: [0, null, 1],
+		0xd85ef8b6: null,
+		0xff6316cb: null,
+		0xed57cafb: null,
+		0x3ae7d144: null,
 	},
 	// UiMapArtStyleLayer
 	1957208: {
 		0x15d83644: [7, 3, 4, 5, 6, 0, 1, 2],
 		0x0b06394e: [6, 2, 3, 4, 5, 0, 1, 7],
+		0xaff6429a: null,
+		0x22f1c1c7: null,
+		0x7123828b: null,
+		0x7d2e349a: null,
+		0x3f597f5a: null,
 	},
 	// UiMapArtTile
 	1957210: {
 		0xdf99e639: [1, 2, 3, 0],
+		0xba5290e9: null,
+		0xeaa72854: null,
+		0x38d8e918: null,
+		0xb262e4e9: null,
+		0x2da5b77b: null,
 	},
 	// UiMapAssignment
 	1957219: {
@@ -1085,10 +1242,16 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0xaa730213: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, null],
 		0xfa228778: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, null],
 		0xf9899d73: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, null],
+		0xc9cc8dfb: null,
 	},
 	// UiMapXMapArt
 	1957217: {
 		0x37ab1e4f: [1, 0],
+		0xd74b6e49: null,
+		0x49452904: null,
+		0x9776e9c8: null,
+		0x517ced19: null,
+		0xeae7da2a: null,
 	},
 	// WMOAreaTable
 	1355528: {
@@ -1096,17 +1259,36 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0x4616c893: [0, 12, null, 7, 1, 8, 9, 2, null, 3, 11, 4, 6, 5, 10],
 		0x30a78709: [0, 13, 2, 9, 1, 10, 11, 3, 8, 4, 14, 5, 7, 6, 12],
 		0x2d2a3d3d: [0, 13, 2, 9, 1, 10, 11, 3, 4, 5, 14, 6, 7, 8, 12],
+		0x60ec930b: null,
+		0xcc3c73ff: null,
+		0xcd7af6e0: null,
+		0x58247de7: null,
+		0xc5a7b977: null,
 	},
 	// WorldMapOverlay
 	1134579: {
+		0xd73de991: null,
+		0x7e893204: null,
+		0x7ab51d54: null,
 		0x0d2dacaf: [0, null, 2, 3, 6, 7, 8, 10, 9, 11, null, null, 5],
 		0xdc4b6af3: [1, null, 2, 3, 5, 6, 7, 9, 8, 10, 11, 12, 13],
 		0x76440fd7: [1, null, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13],
 		0x3f9fb482: [0, 3, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+		0x837a3daa: null,
+		0x40f7db0a: null,
+		0x9646bfae: null,
+		0x00f18fc5: null,
+		0x4cfaae44: null,
+		0x9a196494: null,
 	},
 	// WorldMapOverlayTile
 	1957212: {
 		0x49ff1b46: [1, 2, 3, 0],
+		0xc4dcc916: null,
+		0x8f27b8db: null,
+		0x40f5f817: null,
+		0x341d6db6: null,
+		0x2c843422: null,
 	},
 	// ZoneIntroMusicTable
 	1310251: {
@@ -1116,8 +1298,24 @@ export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>
 		0xaf1f5cfd: [0, 3, 2, 1],
 		0xdb2b4de9: [0, 3, 2, 1],
 		0x6bf0df5d: [0, 3, 2, 1],
+		0x5453b51d: null,
+		0x6fe3ade9: null,
+		0x042f6c99: null,
+		0xbeb0d6b9: null,
+		0xe1f93744: null,
 	},
 	// ZoneMusic
 	1310254: {
+		0x28a5b6a9: null,
+		0x526cef03: null,
+		0x8a8a8af9: null,
+		0x5dfa9925: null,
+		0x56448249: null,
+		0x9e2b332d: null,
+		0x9ebd4495: null,
+		0xfe595ede: null,
+		0x491cf01e: null,
+		0x7894e43e: null,
+		0x72572d05: null,
 	},
 };

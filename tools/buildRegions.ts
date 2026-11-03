@@ -386,7 +386,7 @@ const transports = transportRows.flatMap((t) => {
 		// VMaNGOS spells it "Forgotton".
 		name: t.name.replace('Forgotton', 'Forgotten'),
 		kind,
-		model: displays.getInt(t.displayId, 1)!,
+		model: displays.getInt(t.displayId, FIELDS.GameObjectDisplayInfo.FileDataID)!,
 		period: t.period,
 		path: t.path,
 		legs,

@@ -81,7 +81,7 @@ async function main(): Promise<void> {
 		let rows = '';
 		for (const [hash, layout] of all) {
 			const map = fieldMapOf(names, layout.fields);
-			if (map) rows += `\t\t0x${hash.toLowerCase()}: [${map.map((v) => v ?? 'null').join(', ')}],\n`;
+			rows += `\t\t0x${hash.toLowerCase()}: ${map ? `[${map.map((v) => v ?? 'null').join(', ')}]` : 'null'},\n`;
 		}
 		layouts += `\t// ${table}\n\t${fdid}: {\n${rows}\t},\n`;
 	}
@@ -90,8 +90,8 @@ async function main(): Promise<void> {
 export const FIELDS = {
 ${fields}} as const;
 
-/** By table file ID, then layout hash: where each reference field is in that layout, null where it has none. */
-export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[]>> = {
+/** By table file ID, then layout hash: where each reference field is in that layout, null where it has none; null for a layout the same as the reference. */
+export const GENERATED_LAYOUTS: Record<number, Record<number, (number | null)[] | null>> = {
 ${layouts}};
 `);
 	console.log('Wrote', OUT);
