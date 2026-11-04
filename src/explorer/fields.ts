@@ -66,6 +66,9 @@ const SPEC = {
 	WorldMapOverlay: ['TextureWidth', 'TextureHeight', 'OffsetX', 'OffsetY', 'AreaID'],
 	WorldMapOverlayTile: ['RowIndex', 'ColIndex', 'LayerIndex', 'FileDataID'],
 	ZoneIntroMusicTable: ['Name', 'SoundID', 'MinDelayMinutes'],
+	// Regions of the world with a light of their own, as polygons of points (the zone a point belongs to is its parent).
+	ZoneLight: ['Name', 'MapID', 'LightID', 'Flags', 'Zmin', 'Zmax'],
+	ZoneLightPoint: ['Pos', 'PointOrder'],
 	ZoneMusic: ['SetName', 'SilenceIntervalMin', 'SilenceIntervalMax', 'Sounds'],
 } as const satisfies Spec;
 

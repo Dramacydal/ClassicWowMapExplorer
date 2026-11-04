@@ -45,5 +45,7 @@ export const DB2_FILES = {
 	WorldMapOverlay: 1134579,
 	WorldMapOverlayTile: 1957212,
 	ZoneIntroMusicTable: 1310251,
+	ZoneLight: 1310253,
+	ZoneLightPoint: 1310256,
 	ZoneMusic: 1310254,
 } as const;
