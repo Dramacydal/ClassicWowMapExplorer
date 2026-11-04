@@ -56,7 +56,7 @@ const SPEC = {
 	TaxiPathNode: ['Loc', 'PathID', 'NodeIndex', 'ContinentID', 'Flags', 'Delay'],
 	TerrainType: ['SoundID'],
 	TextureFileData: ['MaterialResourcesID'],
-	UiMap: ['Name_lang', 'ParentUiMapID', 'Type'],
+	UiMap: ['Name_lang', 'ParentUiMapID', 'System', 'Type'],
 	UiMapArt: ['UiMapArtStyleID'],
 	UiMapArtStyleLayer: ['LayerIndex', 'LayerWidth', 'LayerHeight', 'TileWidth', 'TileHeight'],
 	UiMapArtTile: ['RowIndex', 'ColIndex', 'LayerIndex', 'FileDataID'],
